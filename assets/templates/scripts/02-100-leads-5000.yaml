@@ -1,0 +1,92 @@
+id: template
+title: Клиент хочет 100 заявок за 5 000 рублей
+content_type: humor
+topic: Экономика рекламы и стоимость заявки
+idea: Показать на простом расчёте, почему 100 заявок за 5 000 ₽ — нереалистичное ожидание
+audience: Предприниматели, которые впервые заказывают рекламу
+problem: Ожидания от рекламы не совпадают с экономикой ниши
+format: Юмористический диалог с «клиентом» и наглядный расчёт
+target_duration: 30
+tone: иронично, но доброжелательно
+hook: Клиент хочет сто заявок за пять тысяч рублей.
+cta: Хотите честный расчёт для своей ниши? Пишите «расчёт» в комментариях.
+voice_preset: default
+disclaimer: Все цифры в ролике условные и приведены для примера
+scenes:
+- id: s01
+  type: talking
+  duration: 4
+  generator: kling
+  voiceover: Клиент — хочу сто заявок за пять тысяч рублей. Я — мяу… давайте посчитаем.
+  visual: Кот за ноутбуком, на словах «мяу» медленно моргает в камеру
+  prompts:
+    kling: The cat talks to the camera, then pauses and slowly blinks with a deadpan expression, natural mouth movements,
+      ears stay folded, static camera
+- id: s02
+  type: infographic
+  duration: 6
+  generator: local
+  voiceover: Пять тысяч на сто заявок — это пятьдесят рублей за заявку. А клик в нише стоит, допустим, тридцать рублей.
+  visual: График «ожидание vs стоимость клика»
+  local:
+    kind: chart
+    title: Сколько стоит заявка
+    labels:
+    - Ожидание клиента
+    - Цена клика
+    values:
+    - 50
+    - 30
+    unit: ₽
+    demo: true
+- id: s03
+  type: infographic
+  duration: 8
+  generator: local
+  voiceover: Это примерно сто шестьдесят кликов. При конверсии сайта три процента выходит около пяти заявок. Не сто.
+    Пять.
+  visual: Карточка с пошаговым расчётом
+  local:
+    kind: card
+    title: Считаем (условно)
+    bullets:
+    - Бюджет 5 000 ₽ / клик 30 ₽ ≈ 166 кликов
+    - Конверсия сайта 3% ≈ 5 заявок
+    - Заявка ≈ 1 000 ₽, а не 50 ₽
+    footnote: '* цифры условные, для примера'
+- id: s04
+  type: character_motion
+  duration: 6
+  generator: kling
+  voiceover: Чтобы получить сто заявок, нужен либо бюджет больше, либо сайт, который конвертирует лучше.
+  visual: Кот откидывается в кресле и разводит лапами
+  animation: Кот откидывается назад, пожимает плечами
+  prompts:
+    kling: The cat leans back in the office chair and makes a small shrugging motion with its paws, calm and slightly
+      ironic, subtle natural motion, static camera
+- id: s05
+  type: talking
+  duration: 4.5
+  generator: kling
+  voiceover: Хотите честный расчёт для своей ниши? Пишите «расчёт» в комментариях.
+  visual: Кот говорит в камеру и кивает
+  prompts:
+    kling: The cat talks to the camera with a friendly confident look, nods at the end, natural mouth movements, ears
+      stay folded, static camera
+publication:
+  titles:
+  - Клиент хочет 100 заявок за 5 000 рублей
+  - Сколько на самом деле стоит заявка
+  cover_titles:
+  - 100 заявок за 5 000 ₽?
+  - Считаем стоимость заявки
+  cover_time: 1.2
+  description: 'Почему 100 заявок за 5 000 рублей — это обычно невозможно. Считаем на условном примере: цена клика,
+    конверсия сайта и итоговая стоимость заявки. Цифры условные.'
+  hashtags:
+  - маркетинг
+  - стоимостьзаявки
+  - реклама
+  - бизнес
+  - интернетмаркетинг
+  - мяуркетинг

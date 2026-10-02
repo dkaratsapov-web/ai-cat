@@ -1,0 +1,33 @@
+# Секреты
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+
+# Локальные данные
+data/
+*.sqlite3
+*.db
+
+# Тяжёлые медиа проектов (исходники хранятся локально, не в Git)
+projects/*/audio/
+projects/*/scenes/
+projects/*/images/
+projects/*/output/
+projects/*/subtitles/
+projects/*/work/
+projects/*/publish/
+
+.DS_Store
+Thumbs.db

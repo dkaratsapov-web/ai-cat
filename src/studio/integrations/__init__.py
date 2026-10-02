@@ -1,0 +1,35 @@
+"""Реестр адаптеров. Новый сервис = новый класс + строка в реестре."""
+from __future__ import annotations
+
+from .base import TTSProvider, VideoProvider
+
+
+def video_provider(name: str, settings) -> VideoProvider:
+    if name == "kling":
+        from .kling import KlingProvider
+        return KlingProvider(settings)
+    if name == "hedra":
+        from .hedra import HedraProvider
+        return HedraProvider(settings)
+    if name == "runway":
+        from .runway import RunwayProvider
+        return RunwayProvider(settings)
+    if name == "mock":
+        from .mock import MockProvider
+        return MockProvider(settings)
+    raise ValueError(f"Неизвестный видеопровайдер: {name}")
+
+
+def tts_provider(name: str, settings) -> TTSProvider:
+    from .tts import ElevenLabsTTS, ManualTTS, MockTTS
+    if name == "elevenlabs":
+        return ElevenLabsTTS(settings)
+    if name == "manual":
+        return ManualTTS(settings)
+    if name == "mock":
+        return MockTTS(settings)
+    raise ValueError(f"Неизвестный TTS-провайдер: {name}")
+
+
+VIDEO_PROVIDERS = ("kling", "hedra", "runway", "mock")
+TTS_PROVIDERS = ("elevenlabs", "manual", "mock")

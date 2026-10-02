@@ -1,0 +1,50 @@
+# Тарифы для ПРЕДВАРИТЕЛЬНОЙ оценки стоимости. Фактическое списание может отличаться.
+# verified: true  — значение взято из официальной документации (дата в checked)
+# verified: false — значение из вторичных источников, обязательно сверьте в личном кабинете.
+# Перед первой платной генерацией сверьте цены в кабинете и обновите checked.
+
+kling:
+  unit_usd: 0.14                     # 1 Unit = $0.14 (официальная таблица цен API)
+  source: https://kling.ai/document-api/pricing/base/video
+  checked: 2026-09-20
+  verified: true
+  note: >-
+    Единицы списываются из API resource packages. Кредиты обычной подписки Kling (app) НЕ считаются
+    API-кредитами без подтверждения в личном кабинете (официального подтверждения обратного не найдено).
+  models:
+    # units за секунду
+    kling-2.6:        {per_second: {720p: 0.3, 1080p: 0.5}, durations: [5, 10]}
+    kling-2.6-audio:  {per_second: {1080p: 1.0}, durations: [5, 10]}
+    kling-2.5-turbo:  {per_second: {720p: 0.3, 1080p: 0.5}, durations: [5, 10]}
+    kling-3.0:        {per_second: {720p: 0.6, 1080p: 0.8}}
+    kling-3.0-turbo:  {per_second: {720p: 0.8, 1080p: 1.0}}
+    avatar:           {per_second: {std: 0.4, pro: 0.8}, assumption: "std≈720p, pro≈1080p — соответствие режимов не подтверждено"}
+    lip-sync:         {per_5_seconds: 0.5}
+    face-recognition: {per_call: 0.05}
+
+hedra:
+  source: https://www.hedra.com/models/video/hedra/character-3
+  checked: 2026-10-02
+  verified: false
+  models:
+    hedra-character-3: {usd_per_second: {540p: 0.025, 720p: 0.05, 1080p: 0.0625}}
+
+runway:
+  credit_usd: 0.01
+  source: https://docs.dev.runwayml.com/guides/pricing/
+  checked: 2026-10-02
+  verified: false
+  models:
+    gen4_turbo: {credits_per_second: 5}
+    gen4.5:     {credits_per_second: 12}
+    act_two:    {credits_per_second: 5}
+
+elevenlabs:
+  source: https://elevenlabs.io/pricing/api
+  checked: 2026-10-02
+  verified: false
+  # Стоимость оценивается по подписке: $ за 1000 символов при полном расходе лимита.
+  # Creator: $22 / 121k кредитов ≈ $0.18 за 1000 символов. Поменяйте под свой тариф.
+  usd_per_1k_chars: 0.18
+  credits_per_char: {eleven_multilingual_v2: 1.0, eleven_v3: 1.0, eleven_flash_v2_5: 0.5}
+  subscription_based: true           # расход идёт из уже оплаченной подписки, а не сверх неё

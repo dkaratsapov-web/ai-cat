@@ -1,0 +1,90 @@
+id: template
+title: Почему Яндекс Директ сливает бюджет?
+content_type: expert
+topic: Неэффективная реклама в Яндекс Директе
+idea: Три типовые причины слива бюджета и что проверить прямо сегодня
+audience: Владельцы малого бизнеса и маркетологи, которые сами ведут Директ
+problem: Деньги на рекламу тратятся, а заявок мало или они дорогие
+format: Кот-эксперт разбирает три причины, каждая — отдельная карточка
+target_duration: 30
+tone: уверенно, по делу, лёгкий сарказм
+hook: Директ сливает бюджет? Три причины — за тридцать секунд.
+cta: Пишите «аудит» в комментариях — посмотрю вашу рекламу.
+voice_preset: default
+scenes:
+- id: s01
+  type: talking
+  duration: 3.5
+  generator: kling
+  voiceover: Директ сливает бюджет? Три причины — за тридцать секунд.
+  visual: Кот за ноутбуком в офисе смотрит прямо в камеру, слегка прищурившись
+  prompts:
+    kling: The cat looks straight into the camera and talks confidently, natural mouth movements, slight head
+      tilt, blinks, ears stay folded, static camera
+- id: s02
+  type: infographic
+  duration: 7.5
+  generator: local
+  voiceover: Первая — мусорные запросы. Вы продаёте ремонт айфонов, а платите за «айфон скачать бесплатно». Откройте
+    отчёт по поисковым запросам и добавьте минус-слова.
+  visual: Карточка с примером нерелевантных запросов
+  local:
+    kind: card
+    title: 1. Мусорные запросы
+    bullets:
+    - Продаёте ремонт айфонов
+    - Платите за «айфон скачать бесплатно»
+    - 'Решение: отчёт по запросам + минус-слова'
+  assets:
+  - 'По желанию: скриншот отчёта «Поисковые запросы» (обезличенный) — тогда local.kind: screenshot'
+- id: s03
+  type: infographic
+  duration: 7
+  generator: local
+  voiceover: Вторая — не настроены цели в Метрике. Алгоритм не знает, что для вас заявка, и покупает клики, а не
+    клиентов.
+  visual: Карточка про цели Метрики
+  local:
+    kind: card
+    title: 2. Нет целей в Метрике
+    bullets:
+    - Алгоритм не видит заявки
+    - Оптимизируется на клики
+    - 'Решение: цели на формы, звонки, мессенджеры'
+- id: s04
+  type: character_motion
+  duration: 7
+  generator: kling
+  voiceover: Третья — посадочная страница. Реклама приводит людей, а сайт их теряет — долгая загрузка, нет цены, нет
+    понятной кнопки.
+  visual: Кот поворачивается к монитору с сайтом, потом скептически смотрит в камеру
+  animation: Поворот головы к монитору и обратно, лапа на клавиатуре
+  prompts:
+    kling: The cat slowly turns its head toward the monitor showing a website, then looks back at the camera with
+      a skeptical expression, one paw on the keyboard, subtle natural motion, static camera
+- id: s05
+  type: talking
+  duration: 4.5
+  generator: kling
+  voiceover: Проверьте эти три пункта сегодня. А если лень — пишите «аудит», посмотрю вашу рекламу.
+  visual: Кот уверенно кивает в камеру
+  prompts:
+    kling: The cat talks to the camera, nods confidently at the end, natural mouth movements, blinks, ears stay folded,
+      static camera
+publication:
+  titles:
+  - Почему Яндекс Директ сливает бюджет
+  - 3 причины, почему реклама в Директе не окупается
+  cover_titles:
+  - Директ сливает бюджет?
+  - 3 причины слива бюджета
+  cover_time: 1.0
+  description: 'Три частые причины, почему Яндекс Директ тратит деньги без заявок: мусорные запросы, отсутствие целей
+    в Метрике и слабая посадочная страница. Проверьте свою рекламу по этому списку.'
+  hashtags:
+  - яндексдирект
+  - контекстнаяреклама
+  - интернетмаркетинг
+  - маркетинг
+  - реклама
+  - мяуркетинг

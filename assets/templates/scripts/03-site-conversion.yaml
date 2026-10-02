@@ -1,0 +1,88 @@
+id: template
+title: Три ошибки на сайте, которые убивают конверсию
+content_type: expert
+topic: Конверсия сайта
+idea: Первый экран, мобильная версия и призыв к действию — три места, где теряются заявки
+audience: Владельцы бизнеса с сайтом и платным трафиком
+problem: Трафик на сайт идёт, а заявок мало
+format: Кот разбирает три ошибки, каждая — карточка или скриншот
+target_duration: 30
+tone: экспертно, конкретно
+hook: Трафик есть, а заявок нет?
+cta: Пишите «сайт» в комментариях — разберу ваш первый экран.
+voice_preset: default
+scenes:
+- id: s01
+  type: talking
+  duration: 4
+  generator: kling
+  voiceover: Трафик есть, а заявок нет? Вот три ошибки, которые убивают конверсию.
+  visual: Кот за ноутбуком смотрит в камеру
+  prompts:
+    kling: The cat looks into the camera and talks with a serious expert look, natural mouth movements, blinks, ears
+      stay folded, static camera
+- id: s02
+  type: screenshot
+  duration: 7
+  generator: local
+  voiceover: Первая — непонятный первый экран. За три секунды человек должен понять, что вы продаёте, кому и почему
+    именно у вас.
+  visual: Карточка или скриншот первого экрана с выделением заголовка
+  local:
+    kind: card
+    title: 1. Непонятный первый экран
+    bullets:
+    - Что вы продаёте?
+    - Кому?
+    - Почему именно у вас?
+  assets:
+  - 'По желанию: скриншот первого экрана (обезличенный) в imports/hero.png → local.kind: screenshot, image: hero.png'
+- id: s03
+  type: infographic
+  duration: 7
+  generator: local
+  voiceover: Вторая — мобильная версия. Откройте сайт с телефона — мелкий текст, кнопки не нажимаются, форма не влезает
+    в экран.
+  visual: Карточка про мобильную версию
+  local:
+    kind: card
+    title: 2. Мобильная версия
+    bullets:
+    - Мелкий текст
+    - Кнопки не нажимаются
+    - Форма не влезает в экран
+- id: s04
+  type: character_motion
+  duration: 7
+  generator: kling
+  voiceover: Третья — слабый призыв к действию. Не «узнать подробнее», а «получить расчёт за пятнадцать минут».
+  visual: Кот печатает на ноутбуке и смотрит на экран
+  animation: Кот быстро печатает лапами, затем смотрит в камеру
+  prompts:
+    kling: The cat types on the laptop keyboard with its paws, then raises its head and looks at the camera, subtle
+      natural motion, static camera
+- id: s05
+  type: talking
+  duration: 4
+  generator: kling
+  voiceover: Пишите «сайт» в комментариях — разберу ваш первый экран.
+  visual: Кот говорит в камеру
+  prompts:
+    kling: The cat talks to the camera, friendly and confident, natural mouth movements, ears stay folded, static camera
+publication:
+  titles:
+  - Три ошибки на сайте, которые убивают конверсию
+  - Почему сайт не приносит заявки
+  cover_titles:
+  - Сайт без заявок?
+  - 3 ошибки конверсии
+  cover_time: 1.0
+  description: 'Три частые ошибки, из-за которых сайт теряет заявки: непонятный первый экран, неудобная мобильная
+    версия и слабый призыв к действию.'
+  hashtags:
+  - сайт
+  - конверсия
+  - лендинг
+  - интернетмаркетинг
+  - маркетинг
+  - мяуркетинг

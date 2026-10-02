@@ -1,0 +1,43 @@
+id: meowrketing-cat
+name: Кот-маркетолог
+rubric: МяуРкетинг
+identity_traits:
+- the same Scottish Fold cat from the reference image
+- silver-grey tabby fur with dark marbled stripes on the forehead and cheeks
+- white muzzle, chin and chest, white fluffy paws
+- large round amber-green eyes
+- small folded ears pressed to the head
+- round flat face, short pink nose, long white whiskers
+- chubby rounded head, compact body
+default_outfit: black hoodie with a small white paper-plane logo on the chest
+default_location: modern marketing office at evening, warm lamps, monitors with analytics charts, sticky notes on
+  the wall
+style: photorealistic, cinematic soft light, shallow depth of field, vertical 9:16 composition, high detail fur
+negative_prompt: different cat, different breed, upright ears, pointed ears, long muzzle, dog, human face, cartoon,
+  anime, 3d render, deformed face, extra limbs, extra paws, blurry, low quality, text artifacts, watermark, changing
+  fur color, orange fur, black fur
+voice_preset: default
+references:
+- id: office_hoodie_laptop
+  file: references/office_hoodie_laptop.jpg
+  source_file: references/office_hoodie_laptop.webp
+  kind: portrait
+  angle: front_laptop
+  description: Кот в чёрном худи за ноутбуком в маркетинговом офисе, вид спереди
+  status: pending
+  generation:
+    prompt: null
+    model: null
+    params: {}
+    note: Изображение предоставлено владельцем; исходный промпт неизвестен
+planned_angles:
+- angle: front_laptop
+  description: Кот за ноутбуком, вид спереди
+- angle: office_three_quarter
+  description: Кот в офисе, ракурс под углом
+- angle: closeup
+  description: Кот крупным планом
+- angle: near_monitor
+  description: Кот рядом с монитором
+- angle: office_chair
+  description: Кот в офисном кресле

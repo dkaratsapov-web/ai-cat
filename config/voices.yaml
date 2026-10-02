@@ -1,0 +1,29 @@
+# Голосовые пресеты. voice_id берётся из вашего кабинета ElevenLabs (это не секрет, но
+# можно задать и через ELEVENLABS_VOICE_ID в .env — переменная окружения имеет приоритет для default).
+presets:
+  default:
+    provider: elevenlabs
+    voice_id: null              # заполните или задайте ELEVENLABS_VOICE_ID
+    model_id: eleven_multilingual_v2
+    language_code: ru
+    output_format: mp3_44100_128
+    voice_settings:
+      stability: 0.5
+      similarity_boost: 0.8
+      style: 0.25
+      use_speaker_boost: true
+      speed: 1.05
+  calm:
+    provider: elevenlabs
+    voice_id: null
+    model_id: eleven_multilingual_v2
+    language_code: ru
+    output_format: mp3_44100_128
+    voice_settings: {stability: 0.7, similarity_boost: 0.8, style: 0.1, use_speaker_boost: true, speed: 1.0}
+  energetic:
+    provider: elevenlabs
+    voice_id: null
+    model_id: eleven_multilingual_v2
+    language_code: ru
+    output_format: mp3_44100_128
+    voice_settings: {stability: 0.35, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true, speed: 1.1}
