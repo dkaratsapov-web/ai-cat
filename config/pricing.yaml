@@ -41,12 +41,13 @@ runway:
 
 yandex:
   # Yandex SpeechKit API v3: 1 единица = запрос до 250 символов (длиннее — по 250 с округлением вверх).
-  rub_per_unit: 0.1626              # ₽ с НДС за единицу (по вторичным источникам, сверено с ними 2026-10-03)
+  rub_per_unit: 0.1626              # ₽ с НДС за запрос, модель general (официальная страница цен, скриншот владельца)
   rub_per_usd: 90                   # курс для пересчёта в $ бюджета — поставьте актуальный
   source: https://yandex.cloud/ru/docs/speechkit/pricing
   checked: 2026-10-03
-  verified: false
+  verified: true
   subscription_based: false
+  # livetts — 0,25 ₽ за запрос; Brand Voice (свой голос) — от 9 150 ₽ разово + хостинг ~100 тыс. ₽/мес — не используем
 
 elevenlabs:
   source: https://elevenlabs.io/pricing/api
