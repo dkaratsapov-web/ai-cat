@@ -1,9 +1,33 @@
-# Голосовые пресеты. voice_id берётся из вашего кабинета ElevenLabs (это не секрет, но
-# можно задать и через ELEVENLABS_VOICE_ID в .env — переменная окружения имеет приоритет для default).
+# Голосовые пресеты. Сценарий выбирает пресет полем voice_preset (по умолчанию — default).
+# Провайдер озвучки задаётся в config/studio.yaml → providers.tts (или флагом studio voice --provider).
 presets:
+  # --- Yandex SpeechKit (основной) ---
+  # voice: голос (послушать и выбрать — в демо SpeechKit в консоли Yandex Cloud).
+  # role: амплуа (например neutral / good / friendly) — поддерживается не всеми голосами; оставьте null, если сомневаетесь.
+  # speed: темп 0.1–3.0; pitch_shift: сдвиг высоты в Гц (-1000…1000) — можно сделать голос «кошачьим».
   default:
+    provider: yandex
+    voice: filipp
+    role: null
+    speed: 1.1
+    pitch_shift: 0
+  calm:
+    provider: yandex
+    voice: filipp
+    role: null
+    speed: 1.0
+    pitch_shift: 0
+  energetic:
+    provider: yandex
+    voice: filipp
+    role: null
+    speed: 1.2
+    pitch_shift: 0
+
+  # --- ElevenLabs (альтернатива: studio voice <id> --provider elevenlabs, voice_preset: elevenlabs) ---
+  elevenlabs:
     provider: elevenlabs
-    voice_id: null              # заполните или задайте ELEVENLABS_VOICE_ID
+    voice_id: null              # или ELEVENLABS_VOICE_ID в .env
     model_id: eleven_multilingual_v2
     language_code: ru
     output_format: mp3_44100_128
@@ -13,17 +37,3 @@ presets:
       style: 0.25
       use_speaker_boost: true
       speed: 1.05
-  calm:
-    provider: elevenlabs
-    voice_id: null
-    model_id: eleven_multilingual_v2
-    language_code: ru
-    output_format: mp3_44100_128
-    voice_settings: {stability: 0.7, similarity_boost: 0.8, style: 0.1, use_speaker_boost: true, speed: 1.0}
-  energetic:
-    provider: elevenlabs
-    voice_id: null
-    model_id: eleven_multilingual_v2
-    language_code: ru
-    output_format: mp3_44100_128
-    voice_settings: {stability: 0.35, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true, speed: 1.1}

@@ -63,7 +63,7 @@ providers:
   talking_default: kling        # kling (image2video + lip-sync) | hedra | manual
   motion_default: kling
   complex_default: kling        # runway, когда будет подключён
-  tts: elevenlabs               # elevenlabs | manual | mock
+  tts: yandex                   # yandex | elevenlabs | manual | mock
 
 # Параметры моделей по провайдерам (можно переопределить в сцене через local.model / local.resolution)
 kling:

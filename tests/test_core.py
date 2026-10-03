@@ -151,3 +151,38 @@ def test_approval_and_idempotent_mock_generation(settings):
     proj.save_script(sc)
     assert not proj.is_script_approved()
     assert plan(proj, sc)[0].key != db.jobs_for("ep-test")[0]["idempotency_key"]
+
+
+def test_yandex_tts_parses_stream(tmp_path, monkeypatch, settings):
+    import subprocess
+    from studio.integrations import tts as tts_mod
+
+    wav = tmp_path / "t.wav"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "sine=duration=1.5",
+                    "-ar", "22050", str(wav)], check=True)
+    b64 = base64.b64encode(wav.read_bytes()).decode()
+    lines = [
+        {"result": {"audioChunk": {"data": b64}, "wordTimings": [
+            {"word": "привет", "startMs": "0", "lengthMs": "500"},
+            {"word": "кот", "startMs": "600", "lengthMs": "400"}]}},
+    ]
+    captured = {}
+
+    class Resp:
+        status_code = 200
+        text = "\n".join(json.dumps(x) for x in lines)
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        captured.update(url=url, headers=headers, body=json)
+        return Resp()
+
+    monkeypatch.setenv("YANDEX_API_KEY", "yc-secret-key-123")
+    monkeypatch.setattr(tts_mod.requests, "post", fake_post)
+    prov = tts_mod.YandexTTS(settings)
+    res = prov.synthesize("привет кот", {"voice": "filipp", "speed": 1.1}, tmp_path / "s01.wav")
+    assert captured["headers"]["Authorization"] == "Api-Key yc-secret-key-123"
+    assert {"voice": "filipp"} in captured["body"]["hints"]
+    assert res.words == [("привет", 0.0, 0.5), ("кот", 0.6, 1.0)]
+    assert 1.3 < res.duration < 1.7
+    assert prov.billing_units("а" * 251) == 2
+    assert "yc-secret-key-123" not in redact("key yc-secret-key-123")

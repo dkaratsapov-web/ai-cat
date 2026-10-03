@@ -32,7 +32,7 @@ studio script show episode-001              # раскадровка + смет�
 studio pipeline episode-001 --mock          # БЕСПЛАТНЫЙ тестовый прогон всего цикла на копии проекта
 studio script approve episode-001           # утвердить сценарий (без этого платные операции заблокированы)
 studio estimate episode-001                 # смета
-studio voice episode-001                    # озвучка (ElevenLabs, кешируется)
+studio voice episode-001                    # озвучка (Yandex SpeechKit, кешируется)
 studio generate episode-001                 # AI-сцены: смета → подтверждение «да» → генерация
 studio assemble episode-001                 # монтаж (бесплатно, можно повторять)
 studio qa episode-001                       # техническая проверка
@@ -82,7 +82,7 @@ data/studio.sqlite3     задания генерации, расходы, жу�
 src/studio/
   models.py             сценарий и сцены (YAML), валидация
   project.py            проекты и жизненный цикл: draft → approved → voiced → generated → assembled → qa → final_approved → packaged
-  integrations/         единый интерфейс адаптеров: kling, hedra, runway, tts (elevenlabs/manual/mock), mock
+  integrations/         единый интерфейс адаптеров: kling, hedra, runway, tts (yandex/elevenlabs/manual/mock), mock
   generation/           озвучка с кешем; планировщик и исполнитель генераций (идемпотентность, восстановление)
   editing/              FFmpeg: локальные сцены (карточки, графики, скриншоты, Кен Бёрнс), субтитры, монтаж
   quality/              автоматическая техпроверка + чек-лист ручной проверки

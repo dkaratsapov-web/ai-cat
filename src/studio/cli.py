@@ -411,7 +411,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     v = sub.add_parser("voice", help="озвучка")
     v.add_argument("episode")
-    v.add_argument("--provider", choices=["elevenlabs", "manual", "mock"])
+    v.add_argument("--provider", choices=["yandex", "elevenlabs", "manual", "mock"])
     v.add_argument("--scenes")
     v.add_argument("--force", action="store_true", help="перегенерировать даже без изменений текста")
     v.add_argument("--yes", action="store_true", help="подтвердить расход без вопроса")

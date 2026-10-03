@@ -39,6 +39,15 @@ runway:
     gen4.5:     {credits_per_second: 12}
     act_two:    {credits_per_second: 5}
 
+yandex:
+  # Yandex SpeechKit API v3: 1 единица = запрос до 250 символов (длиннее — по 250 с округлением вверх).
+  rub_per_unit: 0.1626              # ₽ с НДС за единицу (по вторичным источникам, сверено с ними 2026-10-03)
+  rub_per_usd: 90                   # курс для пересчёта в $ бюджета — поставьте актуальный
+  source: https://yandex.cloud/ru/docs/speechkit/pricing
+  checked: 2026-10-03
+  verified: false
+  subscription_based: false
+
 elevenlabs:
   source: https://elevenlabs.io/pricing/api
   checked: 2026-10-02

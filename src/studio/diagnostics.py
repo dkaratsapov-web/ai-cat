@@ -49,7 +49,8 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
 
     env_file = settings.root / ".env"
     line("OK" if env_file.exists() else "WARN", ".env", "найден" if env_file.exists() else "нет — скопируйте .env.example в .env")
-    for name in ("KLING_API_KEY", "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID",
+    for name in ("KLING_API_KEY", "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "YANDEX_API_KEY", "YANDEX_FOLDER_ID",
+                 "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID",
                  "HEDRA_API_KEY", "RUNWAYML_API_SECRET"):
         print(f"       {name:<22} {'задан' if os.environ.get(name) else '—'}")
 

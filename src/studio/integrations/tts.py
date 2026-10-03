@@ -1,4 +1,4 @@
-"""Озвучка: ElevenLabs (основной), ручная дорожка, тестовая «тишина».
+"""Озвучка: Yandex SpeechKit (основной), ElevenLabs, ручная дорожка, тестовая «тишина».
 
 ElevenLabs (официальный SDK github.com/elevenlabs/elevenlabs-python):
   POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps?output_format=...
@@ -10,11 +10,14 @@ ElevenLabs (официальный SDK github.com/elevenlabs/elevenlabs-python):
 from __future__ import annotations
 
 import base64
+import json
 import os
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
+
+import requests
 
 from ..config import secret
 from ..editing import ffmpeg
@@ -112,6 +115,126 @@ class ElevenLabsTTS(TTSProvider):
         used, limit = d.get("character_count"), d.get("character_limit")
         return {"tier": d.get("tier"), "character_count": used, "character_limit": limit,
                 "remaining": (limit - used) if isinstance(limit, int) and isinstance(used, int) else None}
+
+
+YC_TTS_URL = "https://tts.api.cloud.yandex.net/tts/v3/utteranceSynthesis"
+YC_UNIT_CHARS = 250  # API v3 тарифицирует запросами по 250 символов с округлением вверх
+
+
+def parse_yandex_stream(raw: str) -> list[dict]:
+    """Ответ REST-шлюза — поток JSON-объектов (по одному на строку), каждый обычно обёрнут в {"result": ...}."""
+    raw = raw.strip()
+    if not raw:
+        return []
+    chunks: list[dict] = []
+    try:
+        whole = json.loads(raw)
+        items = whole if isinstance(whole, list) else [whole]
+    except ValueError:
+        items = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    for it in items:
+        if "error" in it:
+            raise ProviderError(f"Yandex SpeechKit: {str(it['error'])[:300]}")
+        chunks.append(it.get("result", it))
+    return chunks
+
+
+class YandexTTS(TTSProvider):
+    """Yandex SpeechKit API v3 (REST): POST tts.api.cloud.yandex.net/tts/v3/utteranceSynthesis.
+
+    Источник: официальные спецификации github.com/yandex-cloud/cloudapi (yandex/cloud/ai/tts/v3) и SDK
+    yandex-speechkit. Авторизация: `Authorization: Api-Key <ключ сервисного аккаунта>`
+    (или IAM-токен + x-folder-id). Подсказки: voice, role, speed; в ответе — аудио и пословные тайминги.
+    """
+    name = "yandex"
+
+    def __init__(self, settings=None):
+        self.settings = settings
+
+    def configured(self) -> tuple[bool, str]:
+        if secret("YANDEX_API_KEY"):
+            return True, "API-ключ сервисного аккаунта"
+        if secret("YANDEX_IAM_TOKEN") and secret("YANDEX_FOLDER_ID"):
+            return True, "IAM-токен + folder id"
+        return False, "Нет YANDEX_API_KEY в .env"
+
+    def _headers(self) -> dict[str, str]:
+        key = secret("YANDEX_API_KEY")
+        if key:
+            h = {"Authorization": f"Api-Key {key}"}
+        elif secret("YANDEX_IAM_TOKEN"):
+            h = {"Authorization": f"Bearer {secret('YANDEX_IAM_TOKEN')}"}
+        else:
+            raise NotConfiguredError("Нет YANDEX_API_KEY")
+        if secret("YANDEX_FOLDER_ID"):
+            h["x-folder-id"] = secret("YANDEX_FOLDER_ID")  # type: ignore[assignment]
+        h["Content-Type"] = "application/json"
+        return h
+
+    @staticmethod
+    def billing_units(text: str) -> int:
+        return max(1, -(-len(text) // YC_UNIT_CHARS))
+
+    def estimate_usd(self, text: str, preset: dict, pricing: dict) -> float:
+        p = pricing.get("yandex", {})
+        rub = self.billing_units(text) * float(p.get("rub_per_unit", 0.1626))
+        return round(rub / float(p.get("rub_per_usd", 90)), 5)
+
+    def synthesize(self, text: str, preset: dict, dest: Path, **_: Any) -> TTSResult:
+        voice = preset.get("voice") or os.environ.get("YANDEX_VOICE")
+        if not voice:
+            raise NotConfiguredError("Не задан голос: voice в config/voices.yaml или YANDEX_VOICE в .env")
+        hints: list[dict[str, Any]] = [{"voice": voice}]
+        if preset.get("role"):
+            hints.append({"role": preset["role"]})
+        if preset.get("speed"):
+            hints.append({"speed": float(preset["speed"])})
+        if preset.get("pitch_shift"):
+            hints.append({"pitchShift": float(preset["pitch_shift"])})
+        body = {
+            "text": text,
+            "hints": hints,
+            "outputAudioSpec": {"containerAudio": {"containerAudioType": "WAV"}},
+            "loudnessNormalizationType": "LUFS",
+            "unsafeMode": True,  # тексты > 250 символов / 24 с не падают, а тарифицируются по 250 символов
+        }
+        try:
+            r = requests.post(YC_TTS_URL, headers=self._headers(), json=body, timeout=120)
+        except requests.RequestException as e:
+            raise ProviderError(f"Yandex SpeechKit недоступен: {e}", retryable=True) from e
+        if r.status_code >= 400:
+            raise ProviderError(f"Yandex SpeechKit HTTP {r.status_code}: {r.text[:300]}", status=r.status_code)
+        chunks = parse_yandex_stream(r.text)
+        # Каждый чанк — отдельный WAV; несколько склеиваем через ffmpeg concat, чтобы не испортить заголовки
+        parts = [base64.b64decode(c["audioChunk"]["data"]) for c in chunks if c.get("audioChunk")]
+        if not parts:
+            raise ProviderError("Yandex SpeechKit не вернул аудио")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if len(parts) == 1:
+            src = dest.with_suffix(".src.wav")
+            src.write_bytes(parts[0])
+        else:
+            files = []
+            for i, data in enumerate(parts):
+                pth = dest.with_suffix(f".part{i}.wav")
+                pth.write_bytes(data)
+                files.append(pth)
+            lst = dest.with_suffix(".parts.txt")
+            lst.write_text("".join(f"file '{p.resolve()}'\n" for p in files), encoding="utf-8")
+            src = dest.with_suffix(".src.wav")
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
+                            "-i", str(lst), str(src)], check=True)
+        to_wav(src, dest)
+        words = []
+        for c in chunks:
+            for w in c.get("wordTimings") or []:
+                start = int(w.get("startMs", 0)) / 1000
+                words.append((w.get("word", ""), start, start + int(w.get("lengthMs", 0)) / 1000))
+        return TTSResult(audio_path=dest, duration=ffmpeg.duration(dest), words=words, characters=len(text))
+
+    def account_info(self) -> dict[str, Any]:
+        # Бесплатного метода проверки баланса у SpeechKit нет; ключ проверяется первой (копеечной) озвучкой.
+        return {"note": "баланс смотрите в консоли Yandex Cloud → Биллинг"}
 
 
 class ManualTTS(TTSProvider):
