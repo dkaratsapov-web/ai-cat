@@ -20,7 +20,7 @@ def run(args: Sequence[str | Path], *, quiet: bool = True) -> subprocess.Complet
     cmd = [str(a) for a in args]
     if cmd[0] == "ffmpeg":
         cmd[1:1] = ["-hide_banner", "-nostdin", "-y"] + (["-loglevel", "error"] if quiet else [])
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-15:]
         raise FFmpegError(f"{cmd[0]} завершился с ошибкой {proc.returncode}:\n" + "\n".join(tail))
@@ -59,17 +59,19 @@ def fps_of(vstream: dict) -> float:
         return 0.0
 
 
-def available_filters() -> set[str]:
+def has_filter(name: str) -> bool:
+    """Проверяет фильтр напрямую (`ffmpeg -h filter=NAME`) — не зависит от формата списка в разных версиях FFmpeg."""
     try:
-        proc = run(["ffmpeg", "-filters"], quiet=False)
-    except (FFmpegError, FileNotFoundError):
-        return set()
-    names = set()
-    for line in proc.stdout.splitlines():
-        parts = line.split()
-        if len(parts) >= 3 and len(parts[0]) == 3:
-            names.add(parts[1])
-    return names
+        proc = subprocess.run(["ffmpeg", "-hide_banner", "-h", f"filter={name}"], capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    out = (proc.stdout or "") + (proc.stderr or "")
+    return proc.returncode == 0 and "Unknown filter" not in out and f"Filter {name}" in out
+
+
+def missing_filters(names) -> list[str]:
+    return [n for n in names if not has_filter(n)]
 
 
 def escape_filter_path(p: Path) -> str:

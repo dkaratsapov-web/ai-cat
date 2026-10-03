@@ -220,7 +220,7 @@ class YandexTTS(TTSProvider):
                 pth.write_bytes(data)
                 files.append(pth)
             lst = dest.with_suffix(".parts.txt")
-            lst.write_text("".join(f"file '{p.resolve()}'\n" for p in files), encoding="utf-8")
+            lst.write_text("".join(f"file '{p.resolve().as_posix()}'\n" for p in files), encoding="utf-8")
             src = dest.with_suffix(".src.wav")
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
                             "-i", str(lst), str(src)], check=True)

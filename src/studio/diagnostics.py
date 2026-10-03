@@ -27,8 +27,7 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
         p = ffmpeg.which(tool)
         line("OK" if p else "FAIL", tool, p or "не найден — установите FFmpeg и добавьте в PATH")
     if ffmpeg.which("ffmpeg"):
-        filters = ffmpeg.available_filters()
-        missing = [f for f in REQUIRED_FILTERS if f not in filters]
+        missing = ffmpeg.missing_filters(REQUIRED_FILTERS)
         line("OK" if not missing else "FAIL", "Фильтры FFmpeg",
              "все на месте" if not missing else f"нет: {', '.join(missing)} (нужна сборка с libass)")
     try:

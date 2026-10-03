@@ -101,7 +101,7 @@ def concat_video(clips: list[Path], lengths: list[float], out: Path, settings: S
     d = float(settings.get("video.transition_duration", 0.25))
     if mode != "xfade" or len(clips) < 2:
         lst = out.with_suffix(".txt")
-        lst.write_text("".join(f"file '{c.resolve()}'\n" for c in clips), encoding="utf-8")
+        lst.write_text("".join(f"file '{c.resolve().as_posix()}'\n" for c in clips), encoding="utf-8")
         ffmpeg.run(["ffmpeg", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", out])
         return out
     # Каждый клип (кроме последнего) длиннее на d; смещение перехода = накопленная длительность сцен,
