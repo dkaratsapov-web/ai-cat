@@ -71,7 +71,9 @@ def b64_file(path: Path, limit: int) -> str:
 
 def to_mp3(audio: Path, min_seconds: float = 2.0) -> Path:
     """Готовит аудио для Avatar: mp3, не короче 2 с (требование API)."""
-    out = Path(tempfile.mkstemp(suffix=".mp3")[1])
+    fd, name = tempfile.mkstemp(suffix=".mp3")
+    os.close(fd)  # на Windows открытый дескриптор не даёт ffmpeg записать файл
+    out = Path(name)
     subprocess.run(
         ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(audio),
          "-af", f"apad=whole_dur={min_seconds}", "-ac", "1", "-ar", "44100", "-b:a", "128k", str(out)],

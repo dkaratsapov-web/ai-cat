@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 import uuid
+from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 from pathlib import Path
 
 from PIL import Image
@@ -47,7 +49,7 @@ class MockProvider(VideoProvider):
     def poll(self, task_id: str, kind: str) -> TaskState:
         out = self.dir / f"{task_id}.mp4"
         if out.exists():
-            return TaskState(task_id=task_id, status="succeeded", video_url=out.as_uri())
+            return TaskState(task_id=task_id, status="succeeded", video_url=out.as_uri())  # file:///… — переносимо между ОС
         return TaskState(task_id=task_id, status="failed", message="mock: файл не найден")
 
     def find_by_external_id(self, external_id: str, kind: str) -> TaskState | None:
@@ -57,7 +59,9 @@ class MockProvider(VideoProvider):
         return None
 
     def download(self, url: str, dest: Path, timeout: int = 300) -> Path:
-        src = Path(url.removeprefix("file://"))
+        # Корректно и для Windows (file:///C:/…), и для Linux (file:///home/…)
+        parsed = urlparse(url)
+        src = Path(url2pathname(unquote(parsed.path))) if parsed.scheme == "file" else Path(url)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(src.read_bytes())
         return dest
