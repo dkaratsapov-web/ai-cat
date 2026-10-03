@@ -475,7 +475,17 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _utf8_console() -> None:
+    """Windows: при выводе в pipe (например, из Claude Code) консоль может быть cp1251 — не падаем на эмодзи и →."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _utf8_console()
     args = build_parser().parse_args(argv)
     settings = get_settings()
     try:
@@ -483,6 +493,8 @@ def main(argv: list[str] | None = None) -> int:
     except (ProjectError, ScriptError, CharacterError, BudgetError, RuntimeError, ValueError, KeyError) as e:
         print(f"Ошибка: {redact(str(e))}", file=sys.stderr)
         return 1
+    except BrokenPipeError:  # вывод обрезан (например, | head) — не ошибка
+        return 0
     except KeyboardInterrupt:
         print("\nПрервано. Состояние задач сохранено — продолжите командой studio status <id> --refresh")
         return 130

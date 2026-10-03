@@ -24,12 +24,13 @@ references:
   kind: portrait
   angle: front_laptop
   description: Кот в чёрном худи за ноутбуком в маркетинговом офисе, вид спереди
-  status: pending
+  status: approved
   generation:
     prompt: null
     model: null
     params: {}
     note: Изображение предоставлено владельцем; исходный промпт неизвестен
+  reviewed_at: '2026-10-03T16:49:33+00:00'
 planned_angles:
 - angle: front_laptop
   description: Кот за ноутбуком, вид спереди

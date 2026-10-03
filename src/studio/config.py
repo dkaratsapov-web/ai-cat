@@ -28,7 +28,7 @@ def load_dotenv(path: Path) -> None:
     """Минимальный парсер .env без внешних зависимостей. Не перезаписывает уже заданные переменные."""
     if not path.exists():
         return
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():  # -sig: Блокнот Windows может добавить BOM
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue

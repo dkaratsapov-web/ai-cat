@@ -195,3 +195,12 @@ def test_short_episode_id_ignores_mock_copy(settings):
     create_project(template(), settings, episode_id="episode-001-test--mock")
     assert open_project("episode-001", settings).id == "episode-001-test"
     assert open_project("episode-001-test--mock", settings).id == "episode-001-test--mock"
+
+
+def test_dotenv_with_bom(tmp_path, monkeypatch):
+    from studio.config import load_dotenv
+    monkeypatch.delenv("BOM_TEST_KEY", raising=False)
+    (tmp_path / ".env").write_bytes("﻿BOM_TEST_KEY=abc\n".encode("utf-8"))
+    load_dotenv(tmp_path / ".env")
+    assert os.environ.get("BOM_TEST_KEY") == "abc"
+    monkeypatch.delenv("BOM_TEST_KEY")

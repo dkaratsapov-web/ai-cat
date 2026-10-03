@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import json
 import uuid
+from pathlib import Path
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
-from pathlib import Path
 
 from PIL import Image
 
@@ -43,7 +43,7 @@ class MockProvider(VideoProvider):
         label = f"MOCK {req.kind}"
         write_frames(out, kenburns_frames(Image.open(req.image), scene, self.settings, watermark=label),
                      req.duration, self.settings)
-        (self.dir / f"{task_id}.json").write_text(json.dumps({"external_id": req.external_id, "kind": req.kind}))
+        (self.dir / f"{task_id}.json").write_text(json.dumps({"external_id": req.external_id, "kind": req.kind}), encoding="utf-8")
         return task_id
 
     def poll(self, task_id: str, kind: str) -> TaskState:
@@ -54,7 +54,7 @@ class MockProvider(VideoProvider):
 
     def find_by_external_id(self, external_id: str, kind: str) -> TaskState | None:
         for meta in self.dir.glob("*.json"):
-            if json.loads(meta.read_text()).get("external_id") == external_id:
+            if json.loads(meta.read_text(encoding="utf-8")).get("external_id") == external_id:
                 return self.poll(meta.stem, kind)
         return None
 
