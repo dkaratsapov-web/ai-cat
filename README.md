@@ -8,6 +8,8 @@
 
 ## Установка
 
+Пошаговая инструкция с нуля для Windows: [docs/START.md](docs/START.md).
+
 Нужны Python ≥ 3.10 и FFmpeg (со сборкой libass, есть в стандартных пакетах).
 
 ```bash
