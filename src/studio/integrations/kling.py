@@ -32,6 +32,7 @@ from .base import (
     VideoProvider,
     VideoRequest,
     http_json,
+    normalize_status,
 )
 
 DEFAULT_BASE = "https://api-singapore.klingai.com"
@@ -230,7 +231,7 @@ class KlingProvider(VideoProvider):
 
     @staticmethod
     def _parse_new(item: dict) -> TaskState:
-        status = item.get("status", "processing")
+        status = normalize_status(item.get("status"))
         url = None
         for out in item.get("outputs") or []:
             if out.get("type") == "video" and out.get("url"):
@@ -245,7 +246,7 @@ class KlingProvider(VideoProvider):
 
     @staticmethod
     def _parse_legacy(d: dict) -> TaskState:
-        status = {"succeed": "succeeded"}.get(d.get("task_status", ""), d.get("task_status", "processing"))
+        status = normalize_status(d.get("task_status"))
         url = None
         for v in (d.get("task_result") or {}).get("videos") or []:
             if v.get("url"):

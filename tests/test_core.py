@@ -157,13 +157,16 @@ def test_yandex_tts_parses_stream(tmp_path, monkeypatch, settings):
     import subprocess
     from studio.integrations import tts as tts_mod
 
-    wav = tmp_path / "t.wav"
+    pcm = tmp_path / "t.pcm"  # сырой s16le 48 кГц, как запрашивает адаптер
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "sine=duration=1.5",
-                    "-ar", "22050", str(wav)], check=True)
-    b64 = base64.b64encode(wav.read_bytes()).decode()
+                    "-ar", "48000", "-ac", "1", "-f", "s16le", str(pcm)], check=True)
+    data = pcm.read_bytes()
+    half = len(data) // 2 // 2 * 2
+    # Два чанка потока — должны склеиться в один непрерывный сигнал
     lines = [
-        {"result": {"audioChunk": {"data": b64}, "wordTimings": [
-            {"word": "привет", "startMs": "0", "lengthMs": "500"},
+        {"result": {"audioChunk": {"data": base64.b64encode(data[:half]).decode()}, "wordTimings": [
+            {"word": "привет", "startMs": "0", "lengthMs": "500"}]}},
+        {"result": {"audioChunk": {"data": base64.b64encode(data[half:]).decode()}, "wordTimings": [
             {"word": "кот", "startMs": "600", "lengthMs": "400"}]}},
     ]
     captured = {}
@@ -204,3 +207,55 @@ def test_dotenv_with_bom(tmp_path, monkeypatch):
     load_dotenv(tmp_path / ".env")
     assert os.environ.get("BOM_TEST_KEY") == "abc"
     monkeypatch.delenv("BOM_TEST_KEY")
+
+
+def test_status_normalization():
+    from studio.integrations.base import normalize_status
+    assert normalize_status("succeed") == "succeeded"
+    assert normalize_status("COMPLETED") == "succeeded"
+    assert normalize_status("queued") == "submitted"
+    assert normalize_status("weird") == "processing"
+    assert normalize_status("canceled") == "failed"
+
+
+def test_regenerate_blocked_while_job_active(settings):
+    from studio.character.library import CharacterLibrary
+    from studio.generation.runner import Runner, plan
+    from studio.generation.voice import generate_voice
+    from studio.project import create_project
+
+    CharacterLibrary(settings).set_status("office_hoodie_laptop", "approved")
+    script = template()
+    for sc in script.scenes:
+        if sc.id != "s04":
+            sc.generator = "local"
+            sc.local = sc.local or {"kind": "character"}
+    proj = create_project(script, settings, episode_id="ep-regen")
+    proj.approve_script()
+    settings.data["override_generator"] = "mock"
+    db = DB(settings.db_path)
+    generate_voice(proj, db, provider_name="mock", assume_yes=True)
+    key = plan(proj, proj.load_script())[0].key
+    db.create_job(episode="ep-regen", scene_id="s04", provider="mock", kind="image2video", model="m", params={},
+                  idempotency_key=key, est_cost_usd=0, status="unknown")
+    Runner(proj, db).generate(assume_yes=True, regenerate=["s04"], wait=False)
+    assert len(db.jobs_for("ep-regen", "s04", "image2video")) == 1  # новая задача не создана
+
+
+def test_tts_spend_counts_in_budget(settings, monkeypatch):
+    from studio.generation.voice import generate_voice
+    from studio.integrations import tts as tts_mod
+    from studio.project import create_project
+
+    class PaidMock(tts_mod.MockTTS):
+        paid = True
+
+        def estimate_usd(self, text, preset, pricing):
+            return 0.5
+
+    monkeypatch.setattr("studio.generation.voice.tts_provider", lambda name, s: PaidMock(s))
+    proj = create_project(template(), settings, episode_id="ep-tts")
+    proj.approve_script()
+    db = DB(settings.db_path)
+    generate_voice(proj, db, provider_name="yandex", assume_yes=True)
+    assert db.spend(episode="ep-tts") == pytest.approx(0.5 * 5)

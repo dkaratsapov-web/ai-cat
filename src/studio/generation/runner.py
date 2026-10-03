@@ -17,6 +17,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import requests
+
 from ..character.library import CharacterLibrary
 from ..config import Settings
 from ..costs.budget import Budget, CostLine, Estimate
@@ -175,11 +177,18 @@ class Runner:
         reused: list[dict] = []
         for j in jobs:
             ex = existing(self.db, j.key)
-            if ex and j.scene.id not in regenerate:
-                if ex["status"] in DONE_STATUSES:
-                    self._ensure_local(ex, j.scene.id)
-                else:
+            if ex and ex["status"] not in DONE_STATUSES:
+                # Задача ещё идёт или её судьба неясна — новая отправка (даже с --regenerate) = риск двойной оплаты
+                if j.scene.id in regenerate:
+                    hint = (f"studio jobs resolve {ex['id'][:8]} --status failed|cancelled" if ex["status"] == "unknown"
+                            else f"studio status {self.p.id} --refresh")
+                    print(f"{j.scene.id}: предыдущая задача в статусе {ex['status']} — переделка заблокирована, "
+                          f"чтобы не заплатить дважды. Сначала: {hint}")
+                if ex["status"] != "unknown":
                     reused.append(ex)
+                continue
+            if ex and j.scene.id not in regenerate:
+                self._ensure_local(ex, j.scene.id)
                 continue
             failed = [r for r in self.db.find_by_key(j.key) if r["status"] == "failed"]
             if failed and j.scene.id not in regenerate:
@@ -209,7 +218,12 @@ class Runner:
                     print("Отменено. Ничего не отправлено.")
                     return []
 
-        submitted = [self._submit(j, pricing) for j in to_submit]
+        submitted = []
+        for j in to_submit:
+            try:
+                submitted.append(self._submit(j, pricing))
+            except GenerationError as e:
+                print(f"{j.scene.id}: {e}")
         all_jobs = [r for r in reused + submitted if r]
         if wait:
             self.wait([r["id"] for r in all_jobs])
@@ -220,9 +234,15 @@ class Runner:
         """Один проход опроса всех незавершённых задач эпизода (для `studio status`)."""
         out = []
         for job in self.db.active_jobs(self.p.id):
+            if job["kind"] == "tts":  # озвучка синхронная, опрашивать нечего
+                continue
             out.append(self._poll_once(job, download=download))
-        for job in self.db.jobs_for(self.p.id):
-            if job["status"] == "succeeded" and not self._result_file(job).exists() and download:
+        seen: set[str] = set()
+        for job in reversed(self.db.jobs_for(self.p.id)):  # новые первыми — не возвращаем отменённую версию
+            if job["kind"] == "tts" or job["status"] not in DONE_STATUSES or job["scene_id"] in seen:
+                continue
+            seen.add(job["scene_id"])  # ручной импорт тоже «последняя версия» — старое поверх него не качаем
+            if job["status"] == "succeeded" and download and not self._result_file(job).exists():
                 self._download(job)
         return out
 
@@ -268,11 +288,12 @@ class Runner:
         j.request.external_id = job_id
         try:
             task_id = prov.submit(j.request)
-        except AmbiguousSubmitError as e:
+        except (AmbiguousSubmitError, requests.RequestException) as e:
+            # Запрос мог дойти до сервера: ищем задачу по нашему id, повторно НЕ отправляем
             found = prov.find_by_external_id(job_id, j.kind)
             if found:
-                self.db.update_job(job_id, status=found.status if found.status != "succeeded" else "processing",
-                                   external_task_id=found.task_id)
+                status = "failed" if found.status == "failed" else "processing"  # дальше уточнит опрос
+                self.db.update_job(job_id, status=status, external_task_id=found.task_id)
             else:
                 self.db.update_job(job_id, status="unknown", error=str(e))
                 print(f"{j.scene.id}: неясно, создана ли задача ({e}). Повторная отправка заблокирована. "
@@ -282,6 +303,10 @@ class Runner:
             # Сервер явно отказал — задача не создана, деньги не списаны
             self.db.update_job(job_id, status="failed", error=str(e), paid=0)
             print(f"{j.scene.id}: отказ {j.provider}: {e}")
+            return None
+        except Exception as e:  # noqa: BLE001 — локальный сбой до отправки (ffmpeg, файл): запрос не уходил
+            self.db.update_job(job_id, status="failed", error=f"локальная ошибка до отправки: {e}", paid=0)
+            print(f"{j.scene.id}: локальная ошибка подготовки запроса, ничего не отправлено: {e}")
             return None
         self.db.update_job(job_id, status="submitted", external_task_id=task_id)
         if prov.paid:
@@ -313,7 +338,8 @@ class Runner:
             fields["result_url"] = st.video_url
         if st.message and st.status == "failed":
             fields["error"] = st.message
-        if st.billed_units is not None and job["provider"] == "kling":
+        if (st.billed_units is not None and job["provider"] == "kling" and st.status in ("succeeded", "failed")
+                and job.get("actual_cost_usd") is None):
             unit = float(self.s.load_yaml("config/pricing.yaml").get("kling", {}).get("unit_usd", 0.14))
             fields["actual_cost_usd"] = round(st.billed_units * unit, 4)
             self.db.add_cost(amount_usd=fields["actual_cost_usd"], kind="actual", provider="kling",

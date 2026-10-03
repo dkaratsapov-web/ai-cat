@@ -9,6 +9,7 @@ from ..config import Settings
 from ..costs.budget import Budget, CostLine, Estimate
 from ..db import DB
 from ..integrations import tts_provider
+from ..integrations.base import ProviderError
 from ..models import Script
 from ..project import Project
 
@@ -93,13 +94,28 @@ def generate_voice(project: Project, db: DB, *, provider_name: str | None = None
         if provider_name == "elevenlabs":
             kwargs = {"previous_text": voiced[i - 1].voiceover if i > 0 else "",
                       "next_text": voiced[i + 1].voiceover if i + 1 < len(voiced) else ""}
-        res = prov.synthesize(s.voiceover, preset, dest, **kwargs)
+        usd = prov.estimate_usd(s.voiceover, preset, pricing) if prov.paid else 0.0
+        if pricing.get(provider_name, {}).get("subscription_based"):
+            usd = 0.0  # уже оплачено подпиской — в бюджет API не добавляем
+        job_id = None
+        if prov.paid:
+            # Запись до запроса — расход на озвучку учитывается в месячном лимите и лимите ролика
+            job_id = db.create_job(episode=project.id, scene_id=s.id, provider=provider_name, kind="tts",
+                                   model=preset.get("model_id") or preset.get("voice"), params={"chars": len(s.voiceover)},
+                                   idempotency_key=f"tts-{key}", est_cost_usd=usd, status="submitting")
+        try:
+            res = prov.synthesize(s.voiceover, preset, dest, **kwargs)
+        except ProviderError as e:
+            if job_id:  # явный отказ сервера (HTTP-ошибка) — не списано; обрыв связи — считаем оплаченным
+                db.update_job(job_id, status="failed", error=str(e), paid=0 if e.status else 1)
+            raise
         meta = {"key": key, "provider": provider_name, "duration": round(res.duration, 3),
                 "words": [list(w) for w in res.words], "characters": res.characters, "text": s.voiceover}
         meta_path(project, s.id).write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
-        if prov.paid:
-            db.add_cost(amount_usd=prov.estimate_usd(s.voiceover, preset, pricing), kind="estimated",
-                        provider=provider_name, episode=project.id, note=f"tts {s.id} {res.characters} симв.")
+        if job_id:
+            db.update_job(job_id, status="succeeded", result_path=str(dest.relative_to(project.path)))
+            db.add_cost(amount_usd=usd, kind="estimated", provider=provider_name, episode=project.id,
+                        job_id=job_id, note=f"tts {s.id} {res.characters} симв.")
         db.log("tts", {"scene": s.id, "provider": provider_name, "duration": res.duration}, episode=project.id)
         results[s.id] = meta
     if all(scene_voice_meta(project, s.id) for s in voiced):

@@ -99,7 +99,7 @@ class ElevenLabsTTS(TTSProvider):
             "POST", f"{EL_BASE}/v1/text-to-speech/{self.voice_id(preset)}/with-timestamps",
             headers=self._headers(), json_body=body,
             params={"output_format": preset.get("output_format", "mp3_44100_128")},
-            timeout=120, retries=2,
+            timeout=120, retries=2, safe_to_retry=False,  # повтор только при явном 429, иначе — двойное списание
         )
         audio_b64 = data.get("audio_base64")
         if not audio_b64:
@@ -118,6 +118,7 @@ class ElevenLabsTTS(TTSProvider):
 
 
 YC_TTS_URL = "https://tts.api.cloud.yandex.net/tts/v3/utteranceSynthesis"
+YC_SAMPLE_RATE = 48000
 YC_UNIT_CHARS = 250  # API v3 тарифицирует запросами по 250 символов с округлением вверх
 
 
@@ -194,7 +195,8 @@ class YandexTTS(TTSProvider):
         body = {
             "text": text,
             "hints": hints,
-            "outputAudioSpec": {"containerAudio": {"containerAudioType": "WAV"}},
+            # Сырой PCM: чанки потока — продолжение одного сигнала, склеиваются простой конкатенацией байтов
+            "outputAudioSpec": {"rawAudio": {"audioEncoding": "LINEAR16_PCM", "sampleRateHertz": YC_SAMPLE_RATE}},
             "loudnessNormalizationType": "LUFS",
             "unsafeMode": True,  # тексты > 250 символов / 24 с не падают, а тарифицируются по 250 символов
         }
@@ -205,26 +207,14 @@ class YandexTTS(TTSProvider):
         if r.status_code >= 400:
             raise ProviderError(f"Yandex SpeechKit HTTP {r.status_code}: {r.text[:300]}", status=r.status_code)
         chunks = parse_yandex_stream(r.text)
-        # Каждый чанк — отдельный WAV; несколько склеиваем через ffmpeg concat, чтобы не испортить заголовки
-        parts = [base64.b64decode(c["audioChunk"]["data"]) for c in chunks if c.get("audioChunk")]
-        if not parts:
+        pcm = b"".join(base64.b64decode(c["audioChunk"]["data"]) for c in chunks if c.get("audioChunk"))
+        if not pcm:
             raise ProviderError("Yandex SpeechKit не вернул аудио")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        if len(parts) == 1:
-            src = dest.with_suffix(".src.wav")
-            src.write_bytes(parts[0])
-        else:
-            files = []
-            for i, data in enumerate(parts):
-                pth = dest.with_suffix(f".part{i}.wav")
-                pth.write_bytes(data)
-                files.append(pth)
-            lst = dest.with_suffix(".parts.txt")
-            lst.write_text("".join(f"file '{p.resolve().as_posix()}'\n" for p in files), encoding="utf-8")
-            src = dest.with_suffix(".src.wav")
-            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
-                            "-i", str(lst), str(src)], check=True)
-        to_wav(src, dest)
+        raw = dest.with_suffix(".src.pcm")
+        raw.write_bytes(pcm)
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "s16le", "-ar", str(YC_SAMPLE_RATE),
+                        "-ac", "1", "-i", str(raw), "-ar", "48000", str(dest)], check=True)
         words = []
         for c in chunks:
             for w in c.get("wordTimings") or []:

@@ -81,6 +81,10 @@ class HedraProvider(VideoProvider):
                              timeout=60, safe_to_retry=True)  # Idempotency-Key делает повтор безопасным
         except AmbiguousSubmitError:
             raise
+        except ProviderError as e:
+            if e.retryable:  # таймауты/5xx исчерпали повторы — задача могла создаться
+                raise AmbiguousSubmitError(str(e), status=e.status) from e
+            raise
         job_id = data.get("job_id")
         if not job_id:
             raise ProviderError(f"Hedra не вернул job_id: {str(data)[:300]}")

@@ -58,6 +58,18 @@ class VideoRequest:
         }
 
 
+def normalize_status(raw: str | None) -> str:
+    """Приводит статус провайдера к нашему набору: submitted | processing | succeeded | failed."""
+    v = (raw or "").strip().lower()
+    if v in ("succeed", "succeeded", "success", "completed", "complete", "done"):
+        return "succeeded"
+    if v in ("failed", "fail", "error", "cancelled", "canceled"):
+        return "failed"
+    if v in ("submitted", "pending", "queued", "in_queue", "throttled"):
+        return "submitted"
+    return "processing"
+
+
 @dataclass
 class TaskState:
     task_id: str

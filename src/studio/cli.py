@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -498,6 +499,13 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\nПрервано. Состояние задач сохранено — продолжите командой studio status <id> --refresh")
         return 130
+    except Exception as e:  # noqa: BLE001 — понятное сообщение вместо трейсбэка
+        if os.environ.get("STUDIO_DEBUG"):
+            raise
+        print(f"Непредвиденная ошибка: {type(e).__name__}: {redact(str(e))}\n"
+              "Подробности для разбора: $env:STUDIO_DEBUG=1 и повторите команду (Linux/Mac: STUDIO_DEBUG=1 studio ...)",
+              file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

@@ -52,7 +52,7 @@ def write_frames(out: Path, frame_fn: Frame, duration: float, settings: Settings
                 img = img.resize((w, h))
             proc.stdin.write(img.convert("RGB").tobytes())
         proc.stdin.close()
-    except BrokenPipeError:
+    except OSError:  # BrokenPipeError на Linux, OSError(EINVAL) на Windows — ffmpeg завершился раньше
         pass
     err = proc.stderr.read().decode(errors="ignore") if proc.stderr else ""
     if proc.wait() != 0:
