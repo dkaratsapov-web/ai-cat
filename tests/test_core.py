@@ -259,3 +259,32 @@ def test_tts_spend_counts_in_budget(settings, monkeypatch):
     db = DB(settings.db_path)
     generate_voice(proj, db, provider_name="yandex", assume_yes=True)
     assert db.spend(episode="ep-tts") == pytest.approx(0.5 * 5)
+
+
+def test_security_guards(settings, tmp_path, monkeypatch):
+    from studio.editing.local_scenes import LocalRenderError, resolve_image
+    from studio.integrations.base import NotConfiguredError
+    from studio.project import ProjectError, open_project
+
+    proj = tmp_path / "proj"
+    (proj / "imports").mkdir(parents=True)
+    (settings.root / ".env").write_text("KLING_API_KEY=secret\n", encoding="utf-8")
+    # нельзя выйти за пределы проекта и отправить .env под видом картинки
+    for bad in ("../../.env", str(settings.root / ".env"), "../proj/../../.env"):
+        with pytest.raises(LocalRenderError):
+            resolve_image(proj, settings, bad)
+    (proj / "imports" / "fake.png").write_text("not an image", encoding="utf-8")
+    with pytest.raises(LocalRenderError):
+        resolve_image(proj, settings, "fake.png")
+    # ключ с переводом строки не утекает в текст ошибки
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "sk_testsecret123\n")
+    assert "sk_testsecret123" not in redact(f"Invalid header value {'sk_testsecret123' + chr(10)!r}")
+    assert "abc123def" not in redact("Authorization: Api-Key abc123def")
+    # недопустимые id
+    with pytest.raises(ScriptError):
+        Script.from_dict({"id": "x", "title": "t", "scenes": [{"id": "../../x", "type": "talking", "duration": 3}]})
+    with pytest.raises(ProjectError):
+        open_project("../etc", settings)
+    monkeypatch.setenv("KLING_API_BASE", "http://evil.example.com")
+    with pytest.raises(NotConfiguredError):
+        KlingProvider(settings)

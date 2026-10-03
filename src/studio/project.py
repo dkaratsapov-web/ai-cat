@@ -186,6 +186,8 @@ def create_project(script: Script, settings: Settings | None = None, episode_id:
 
 def open_project(episode: str, settings: Settings | None = None) -> Project:
     s = settings or get_settings()
+    if not re.match(r"^[A-Za-z0-9_-]{1,120}$", episode or ""):
+        raise ProjectError(f"Недопустимый id эпизода: '{episode}'")
     root = episodes_root(s)
     p = root / episode
     if not p.exists():

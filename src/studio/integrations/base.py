@@ -177,7 +177,9 @@ def http_json(method: str, url: str, *, headers: dict, json_body: Any = None, pa
     last: Exception | None = None
     for attempt in range(retries + 1):
         try:
-            r = requests.request(method, url, headers=headers, json=json_body, params=params, timeout=timeout)
+            # allow_redirects=False: заголовки с ключом (xi-api-key и т.п.) не уходят на чужой хост
+            r = requests.request(method, url, headers=headers, json=json_body, params=params, timeout=timeout,
+                                 allow_redirects=False)
         except (requests.ConnectionError, requests.Timeout) as e:
             if not safe_to_retry:
                 raise AmbiguousSubmitError(f"Нет ответа от {url}: {e}") from e
@@ -197,6 +199,8 @@ def http_json(method: str, url: str, *, headers: dict, json_body: Any = None, pa
         if r.status_code >= 500 and not safe_to_retry:
             raise AmbiguousSubmitError(f"HTTP {r.status_code} при создании задачи: {str(data)[:300]}",
                                        status=r.status_code)
+        if 300 <= r.status_code < 400:
+            raise ProviderError(f"Неожиданный редирект HTTP {r.status_code} с {url} — запрос остановлен", status=r.status_code)
         if r.status_code >= 400:
             raise ProviderError(f"HTTP {r.status_code}: {str(data)[:500]}", status=r.status_code,
                                 code=(data or {}).get("code") if isinstance(data, dict) else None)

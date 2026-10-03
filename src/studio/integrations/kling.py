@@ -23,6 +23,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from ..config import secret
 from .base import (
@@ -89,7 +90,10 @@ class KlingProvider(VideoProvider):
 
     def __init__(self, settings=None):
         self.settings = settings
-        self.base = (os.environ.get("KLING_API_BASE") or DEFAULT_BASE).rstrip("/")
+        self.base = (os.environ.get("KLING_API_BASE") or DEFAULT_BASE).strip().rstrip("/")
+        host = urlparse(self.base).hostname or ""
+        if urlparse(self.base).scheme != "https" or not (host == "klingai.com" or host.endswith(".klingai.com")):
+            raise NotConfiguredError(f"KLING_API_BASE должен быть https://…klingai.com (сейчас: {self.base})")
         self.timeout = int(settings.get("generation.http_timeout_sec", 60)) if settings else 60
 
     # ------------------------------------------------------------ auth

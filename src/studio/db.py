@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
+from .config import redact
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
@@ -102,6 +104,8 @@ class DB:
     def update_job(self, job_id: str, **fields: Any) -> None:
         if not fields:
             return
+        if fields.get("error"):
+            fields["error"] = redact(str(fields["error"]))
         fields["updated_at"] = now_iso()
         cols = ", ".join(f"{k} = ?" for k in fields)
         with self.conn() as c:
@@ -191,6 +195,7 @@ class DB:
     def log(self, action: str, detail: Any = "", episode: str | None = None) -> None:
         if not isinstance(detail, str):
             detail = json.dumps(detail, ensure_ascii=False)
+        detail = redact(detail)
         with self.conn() as c:
             c.execute("INSERT INTO events (episode, action, detail, ts) VALUES (?,?,?,?)",
                       (episode, action, detail, now_iso()))

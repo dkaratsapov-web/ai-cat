@@ -58,17 +58,19 @@ def redact(text: str) -> str:
         return text
     out = str(text)
     for name in SECRET_ENV_NAMES:
-        val = os.environ.get(name)
-        if val and len(val) >= 6:
-            out = out.replace(val, f"<{name}>")
+        raw = os.environ.get(name) or ""
+        for val in {raw, raw.strip(), repr(raw)[1:-1]}:
+            if val and len(val.strip()) >= 6:
+                out = out.replace(val, f"<{name}>")
+    out = re.sub(r"(Api-Key\s+)[A-Za-z0-9._\-]+", r"\1<redacted>", out)
     out = re.sub(r"(Bearer\s+)[A-Za-z0-9._\-]+", r"\1<redacted>", out)
     out = re.sub(r"(?i)(xi-api-key|x-api-key|authorization)([\"']?\s*[:=]\s*[\"']?)[^\s\"',}]+", r"\1\2<redacted>", out)
     return out
 
 
 def secret(name: str) -> str | None:
-    val = os.environ.get(name)
-    return val if val else None
+    val = (os.environ.get(name) or "").strip()  # перевод строки в ключе ломает заголовок и утекает в ошибку
+    return val or None
 
 
 def deep_merge(base: dict, override: dict) -> dict:

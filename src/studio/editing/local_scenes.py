@@ -105,11 +105,23 @@ def rubric_badge(draw: ImageDraw.ImageDraw, settings: Settings, x: int, y: int) 
 
 
 def resolve_image(project_path: Path, settings: Settings, rel: str) -> Path:
-    for base in (project_path / "imports", project_path / "images", project_path, settings.root):
+    """Картинка сцены: только внутри imports/ и images/ проекта или assets/ — и только настоящее изображение.
+
+    Защита от отправки в платный API произвольного файла (например, .env) под видом кадра."""
+    bases = [project_path / "imports", project_path / "images", settings.assets_dir]
+    for base in bases:
+        base_r = base.resolve()
         p = (base / rel).resolve()
-        if p.exists():
-            return p
-    raise LocalRenderError(f"Файл не найден: {rel} (ищется в imports/, images/ проекта и в корне)")
+        if not p.is_relative_to(base_r) or not p.is_file():
+            continue
+        try:
+            with Image.open(p) as im:
+                im.verify()
+        except Exception as e:  # noqa: BLE001
+            raise LocalRenderError(f"{rel}: это не изображение ({e})") from e
+        return p
+    raise LocalRenderError(f"Изображение не найдено: {rel}. Положите его в imports/ проекта "
+                           "(разрешены только imports/, images/ проекта и assets/)")
 
 
 # ---------------------------------------------------------------- kinds

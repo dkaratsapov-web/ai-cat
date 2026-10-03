@@ -20,7 +20,7 @@ from pathlib import Path
 import requests
 
 from ..character.library import CharacterLibrary
-from ..config import Settings
+from ..config import Settings, redact
 from ..costs.budget import Budget, CostLine, Estimate
 from ..db import ACTIVE_STATUSES, DB, DONE_STATUSES
 from ..integrations import video_provider
@@ -223,7 +223,7 @@ class Runner:
             try:
                 submitted.append(self._submit(j, pricing))
             except GenerationError as e:
-                print(f"{j.scene.id}: {e}")
+                print(f"{j.scene.id}: {redact(str(e))}")
         all_jobs = [r for r in reused + submitted if r]
         if wait:
             self.wait([r["id"] for r in all_jobs])
@@ -296,17 +296,17 @@ class Runner:
                 self.db.update_job(job_id, status=status, external_task_id=found.task_id)
             else:
                 self.db.update_job(job_id, status="unknown", error=str(e))
-                print(f"{j.scene.id}: неясно, создана ли задача ({e}). Повторная отправка заблокирована. "
+                print(f"{j.scene.id}: неясно, создана ли задача ({redact(str(e))}). Повторная отправка заблокирована. "
                       f"Проверьте кабинет {j.provider} и выполните: studio jobs resolve {job_id[:8]} --status failed|cancelled")
             return self.db.get_job(job_id)
         except ProviderError as e:
             # Сервер явно отказал — задача не создана, деньги не списаны
             self.db.update_job(job_id, status="failed", error=str(e), paid=0)
-            print(f"{j.scene.id}: отказ {j.provider}: {e}")
+            print(f"{j.scene.id}: отказ {j.provider}: {redact(str(e))}")
             return None
         except Exception as e:  # noqa: BLE001 — локальный сбой до отправки (ffmpeg, файл): запрос не уходил
             self.db.update_job(job_id, status="failed", error=f"локальная ошибка до отправки: {e}", paid=0)
-            print(f"{j.scene.id}: локальная ошибка подготовки запроса, ничего не отправлено: {e}")
+            print(f"{j.scene.id}: локальная ошибка подготовки запроса, ничего не отправлено: {redact(str(e))}")
             return None
         self.db.update_job(job_id, status="submitted", external_task_id=task_id)
         if prov.paid:
@@ -331,7 +331,7 @@ class Runner:
         try:
             st = prov.poll(job["external_task_id"], job["kind"])
         except ProviderError as e:
-            print(f"  {job['scene_id']}: ошибка опроса ({e}) — попробуем позже")
+            print(f"  {job['scene_id']}: ошибка опроса ({redact(str(e))}) — попробуем позже")
             return job
         fields: dict = {"status": st.status if st.status in ("succeeded", "failed") else "processing"}
         if st.video_url:

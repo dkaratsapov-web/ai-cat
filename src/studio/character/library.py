@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,6 +55,8 @@ class CharacterLibrary:
 
     def add(self, src: Path, ref_id: str, *, kind: str = "reference", angle: str = "", description: str = "",
             prompt: str | None = None, model: str | None = None, params: dict | None = None) -> dict:
+        if not re.match(r"^[A-Za-z0-9_-]{1,64}$", ref_id):
+            raise CharacterError("id референса — только латиница, цифры, '-' и '_'")
         src = Path(src)
         if not src.exists():
             raise CharacterError(f"Файл не найден: {src}")

@@ -231,7 +231,7 @@ def cmd_status(a, s):
     for j in db.jobs_for(proj.id):
         cost = j["actual_cost_usd"] if j["actual_cost_usd"] is not None else j["est_cost_usd"]
         print(f"  {j['id'][:8]} {j['scene_id'] or '-':<5} {j['provider']:<7} {j['kind']:<11} {j['status']:<11} "
-              f"${cost or 0:.3f} {j['result_path'] or ''} {('— ' + j['error'][:80]) if j['error'] else ''}")
+              f"${cost or 0:.3f} {j['result_path'] or ''} {('— ' + redact(j['error'])[:80]) if j['error'] else ''}")
     script = proj.load_script()
     for sc in script.scenes:
         src = proj.scene_source(sc.id)
@@ -315,7 +315,8 @@ def cmd_pipeline(a, s):
     print("1/4 Озвучка")
     generate_voice(proj, db, provider_name="mock" if a.mock else None, assume_yes=a.yes)
     print("2/4 Генерация сцен")
-    Runner(proj, db).generate(assume_yes=a.yes)
+    # Смета говорящих сцен зависит от длины озвучки — её нужно увидеть и подтвердить отдельно
+    Runner(proj, db).generate(assume_yes=a.yes and a.mock)
     print("3/4 Монтаж")
     out = assemble(proj)
     print(f"   {out}")

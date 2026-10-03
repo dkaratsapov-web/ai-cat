@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -25,6 +26,8 @@ SCENE_TYPES = {
     "infographic": "Инфографика / график",
     "ai_scene": "Дополнительная AI-сцена",
 }
+
+SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
 GENERATORS = ("kling", "hedra", "runway", "local", "manual", "mock")
 PAID_GENERATORS = ("kling", "hedra", "runway")
@@ -118,6 +121,9 @@ class Script:
                 raise ScriptError(f"Сцена #{i + 1}: неизвестные поля {', '.join(sorted(bad))}")
             if "id" not in s:
                 s["id"] = f"s{i + 1:02d}"
+            s["id"] = str(s["id"])
+            if not SAFE_ID.match(s["id"]):
+                raise ScriptError(f"Сцена #{i + 1}: недопустимый id '{s['id']}' — только латиница, цифры, '-' и '_'")
             s["prompts"] = s.get("prompts") or {}
             s["local"] = s.get("local") or {}
             s["assets"] = s.get("assets") or []
@@ -174,6 +180,8 @@ class Script:
         if len(ids) != len(set(ids)):
             errors.append("Повторяющиеся id сцен")
         for s in self.scenes:
+            if not SAFE_ID.match(s.id):
+                errors.append(f"id сцены '{s.id}' — только латиница, цифры, '-' и '_' (до 32 символов)")
             if s.type not in SCENE_TYPES:
                 errors.append(f"{s.id}: неизвестный тип сцены '{s.type}' (допустимо: {', '.join(SCENE_TYPES)})")
             if s.generator not in GENERATORS:

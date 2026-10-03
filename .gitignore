@@ -28,6 +28,8 @@ projects/*/output/
 projects/*/subtitles/
 projects/*/work/
 projects/*/publish/
+projects/*/imports/
+config/studio.local.yaml
 
 .DS_Store
 Thumbs.db
