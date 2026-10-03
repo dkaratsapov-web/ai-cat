@@ -186,3 +186,12 @@ def test_yandex_tts_parses_stream(tmp_path, monkeypatch, settings):
     assert 1.3 < res.duration < 1.7
     assert prov.billing_units("а" * 251) == 2
     assert "yc-secret-key-123" not in redact("key yc-secret-key-123")
+
+
+def test_short_episode_id_ignores_mock_copy(settings):
+    from studio.project import create_project, open_project
+    script = template()
+    create_project(script, settings, episode_id="episode-001-test")
+    create_project(template(), settings, episode_id="episode-001-test--mock")
+    assert open_project("episode-001", settings).id == "episode-001-test"
+    assert open_project("episode-001-test--mock", settings).id == "episode-001-test--mock"

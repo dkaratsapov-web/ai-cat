@@ -190,6 +190,9 @@ def open_project(episode: str, settings: Settings | None = None) -> Project:
     p = root / episode
     if not p.exists():
         matches = sorted(x for x in root.iterdir() if x.is_dir() and x.name.startswith(episode))
+        # Тестовые копии (<id>--mock) не мешают короткому имени основного проекта
+        if len(matches) > 1 and "--mock" not in episode:
+            matches = [m for m in matches if not m.name.endswith("--mock")] or matches
         if len(matches) == 1:
             p = matches[0]
         elif not matches:
