@@ -162,13 +162,15 @@ class YandexTTS(TTSProvider):
     def _headers(self) -> dict[str, str]:
         key = secret("YANDEX_API_KEY")
         if key:
+            # API-ключ уже привязан к каталогу сервисного аккаунта — x-folder-id не нужен
+            # (неверный folder id приводит к ошибке 400 «folder ID does not match»)
             h = {"Authorization": f"Api-Key {key}"}
         elif secret("YANDEX_IAM_TOKEN"):
             h = {"Authorization": f"Bearer {secret('YANDEX_IAM_TOKEN')}"}
+            if secret("YANDEX_FOLDER_ID"):
+                h["x-folder-id"] = secret("YANDEX_FOLDER_ID")  # type: ignore[assignment]
         else:
             raise NotConfiguredError("Нет YANDEX_API_KEY")
-        if secret("YANDEX_FOLDER_ID"):
-            h["x-folder-id"] = secret("YANDEX_FOLDER_ID")  # type: ignore[assignment]
         h["Content-Type"] = "application/json"
         return h
 

@@ -75,7 +75,8 @@ def generate_voice(project: Project, db: DB, *, provider_name: str | None = None
         budget = Budget(settings, db)
         for w in budget.check(project.id, 0 if pricing.get(provider_name, {}).get("subscription_based") else amount):
             print(w)
-        if not budget.confirm(f"Озвучка {len(todo)} фрагментов (~${amount:.3f} из лимита подписки {provider_name}).",
+        how = "из лимита подписки" if pricing.get(provider_name, {}).get("subscription_based") else "оплата по факту"
+        if not budget.confirm(f"Озвучка {len(todo)} фрагментов через {provider_name}: ~${amount:.3f} ({how}).",
                               assume_yes):
             raise RuntimeError("Озвучка отменена пользователем")
 
