@@ -278,13 +278,21 @@ def kenburns_frames(img: Image.Image, scene: Scene, settings: Settings, *, water
     return frame
 
 
+def to_px(box, width: int, height: int) -> list[int]:
+    """[x, y, w, h] в пикселях или в долях (все значения ≤ 1) → пиксели. Доли не зависят от разрешения скриншота."""
+    x, y, bw, bh = [float(v) for v in box]
+    if max(x, y, bw, bh) <= 1.0:
+        return [round(x * width), round(y * height), round(bw * width), round(bh * height)]
+    return [round(x), round(y), round(bw), round(bh)]
+
+
 def redact_boxes(img: Image.Image, boxes: list) -> Image.Image:
     """Обезличивание: сильное размытие прямоугольников [x, y, w, h] (в пикселях исходного скриншота)."""
     if not boxes:
         return img
     out = img.copy()
     for b in boxes:
-        x, y, bw, bh = [int(v) for v in b]
+        x, y, bw, bh = to_px(b, img.width, img.height)
         region = out.crop((x, y, x + bw, y + bh))
         # пикселизация + размытие — текст не восстанавливается
         small = region.resize((max(1, bw // 16), max(1, bh // 16)), Image.BILINEAR)
@@ -295,7 +303,8 @@ def redact_boxes(img: Image.Image, boxes: list) -> Image.Image:
 
 def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Frame:
     """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...'}], caption,
-               redact: [[x,y,w,h], ...]}  — redact размывает конфиденциальные области
+               redact: [[x,y,w,h], ...], crop: [x,y,w,h]}  — redact размывает конфиденциальное,
+               crop оставляет нужную часть; координаты — пиксели исходника или доли 0–1
 
     Скриншот вписывается по ширине на размытом фоне, медленно приближается,
     поверх появляются рамки-акценты (координаты — в пикселях исходного скриншота).
@@ -305,26 +314,35 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
     cfg = scene.local
     accent = hex_rgb(settings.get("branding.accent_color"))
     img = redact_boxes(img.convert("RGB"), cfg.get("redact", []))
+    src_w, src_h = img.size
+    # crop: [x, y, w, h] — показать только нужную часть широкого скриншота (координаты исходника)
+    ox = oy = 0
+    if cfg.get("crop"):
+        ox, oy, cw, ch = to_px(cfg["crop"], src_w, src_h)
+        img = img.crop((ox, oy, ox + cw, oy + ch))
     blur = cover(img.convert("RGB"), w, h).filter(ImageFilter.GaussianBlur(40))
     blur = Image.blend(blur, Image.new("RGB", (w, h), (0, 0, 0)), 0.45)
+    cap_f = fonts.font(settings.fonts_dir, 60)
+    lab_f = fonts.font(settings.fonts_dir, 44)
+    measure = ImageDraw.Draw(Image.new("RGB", (8, 8)))
+    cap_lines = wrap(measure, cfg["caption"], cap_f, w - sa["left"] - sa["right"]) if cfg.get("caption") else []
+    # Область под скриншот: ниже подписи и выше нижней безопасной зоны (с местом под ярлыки рамок)
+    area_top = (sa["top"] - 10 + 70 * len(cap_lines) + 40) if cap_lines else sa["top"]
+    area_bottom = h - sa["bottom"] + 40
+    avail_h = area_bottom - area_top
     inner_w = w - 2 * 50
-    scale = inner_w / img.width
-    max_h = h - sa["top"] - sa["bottom"] + 120
-    if img.height * scale > max_h:
-        scale = max_h / img.height
+    scale = min(inner_w / img.width, avail_h / img.height)
     shot = img.convert("RGB").resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
-    sx, sy = (w - shot.width) // 2, sa["top"] + (max_h - 120 - shot.height) // 2 + 60
+    sx, sy = (w - shot.width) // 2, area_top + (avail_h - shot.height) // 2
     base = blur.copy()
     shadow = Image.new("RGBA", (shot.width + 40, shot.height + 40), (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle((20, 20, shot.width + 20, shot.height + 20), radius=24, fill=(0, 0, 0, 160))
     base.paste(shadow.filter(ImageFilter.GaussianBlur(16)), (sx - 20, sy - 4), shadow.filter(ImageFilter.GaussianBlur(16)))
     base.paste(shot, (sx, sy))
-    cap_f = fonts.font(settings.fonts_dir, 60)
-    lab_f = fonts.font(settings.fonts_dir, 44)
-    if cfg.get("caption"):
+    if cap_lines:
         d = ImageDraw.Draw(base)
         yy = sa["top"] - 10
-        for line in wrap(d, cfg["caption"], cap_f, w - sa["left"] - sa["right"]):
+        for line in cap_lines:
             d.text((sa["left"], yy), line, font=cap_f, fill=(255, 255, 255), stroke_width=4, stroke_fill=(0, 0, 0))
             yy += 70
     highlights = cfg.get("highlights", []) or []
@@ -338,7 +356,8 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
             at = float(hl.get("at", 0.5))
             if t < at:
                 continue
-            x, y, bw, bh = [v * scale for v in hl["box"]]
+            bx, by, bbw, bbh = to_px(hl["box"], src_w, src_h)
+            x, y, bw, bh = (bx - ox) * scale, (by - oy) * scale, bbw * scale, bbh * scale
             pulse = 0.5 + 0.5 * math.sin((t - at) * 6)
             width = int(6 + 4 * pulse)
             dd.rounded_rectangle((sx + x - 8, sy + y - 8, sx + x + bw + 8, sy + y + bh + 8), radius=16,

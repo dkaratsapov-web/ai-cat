@@ -190,6 +190,10 @@ class Script:
                 errors.append(f"{s.id}: длительность должна быть > 0")
             if s.generator in PAID_GENERATORS and not (s.prompts.get(s.generator) or s.visual):
                 errors.append(f"{s.id}: для генератора {s.generator} нужен промпт (prompts.{s.generator}) или visual")
+            for hl in s.local.get("highlights", []) or []:
+                extra = set(hl) - {"box", "at", "label"}
+                if extra:
+                    errors.append(f"{s.id}: в рамке лишние поля {sorted(extra)} — возьмите label в кавычки, если в нём есть запятая")
             if s.generator == "local" and not s.local.get("kind"):
                 errors.append(f"{s.id}: для локальной сцены нужен local.kind (card | chart | screenshot | character | image)")
             if s.voiceover:

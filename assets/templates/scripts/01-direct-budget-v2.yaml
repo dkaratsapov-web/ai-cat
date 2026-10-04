@@ -1,0 +1,120 @@
+id: template
+title: Почему Яндекс Директ сливает бюджет?
+content_type: expert
+topic: Нецелевые показы и слабые цели в Яндекс Директе — на реальном отчёте
+idea: Показать на реальном (обезличенном) отчёте, куда утекает бюджет, и что проверить у себя
+audience: Владельцы интернет-магазинов и маркетологи, которые сами ведут Директ
+problem: Реклама показывается по чужим запросам, а цели не настроены — деньги уходят без заявок
+format: Кот-эксперт разбирает реальные скриншоты, чередуя ракурсы
+target_duration: 30
+tone: уверенно, по делу, лёгкая ирония
+hook: Директ сливает бюджет? Смотрите, куда уходят деньги.
+cta: Пишите «аудит» в комментариях — посмотрю вашу рекламу.
+voice_preset: default
+scenes:
+- id: s01
+  type: talking
+  duration: 3.5
+  generator: kling
+  reference: closeup_front
+  voiceover: Директ сливает бюджет? Смотрите, куда уходят деньги.
+  visual: Крупный план — кот смотрит в камеру, слегка наклоняет голову
+  prompts:
+    kling: The cat talks to the camera with a confident, slightly ironic look, tilts its head, raises one paw
+      a little, blinks, monitors flicker softly in the background, ears stay folded, static camera
+- id: s02
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: shock_monitor
+  voiceover: Это реальный отчёт магазина техники.
+  visual: Кот в шоке смотрит на монитор с падающим графиком
+  animation: Кот отшатывается от экрана и поворачивается к камере, экран мерцает
+  prompts:
+    kling: The cat leans back from the monitor in shock, paws near its face, then turns its head to the camera,
+      the falling red chart on the screen flickers, warm office lights in the background, ears stay folded,
+      static camera
+- id: s03
+  type: screenshot
+  duration: 7
+  generator: local
+  voiceover: Магазин продаёт Apple, а реклама крутится по Самсунгу, Сяоми и даже по торговому центру.
+  visual: Скриншот отчёта «Поисковые запросы» — рамки на ТЦ и на чужих брендах
+  local:
+    kind: screenshot
+    image: search_queries.png
+    caption: Магазин Apple платит за «samsung»
+    crop: [0.1108, 0.49, 0.1679, 0.4677]
+    redact:
+    - [0.1242, 0.6336, 0.0616, 0.0189]
+    highlights:
+    - {box: [0.1136, 0.5312, 0.1511, 0.0245], at: 1.2, label: "ТЦ, а не покупатель"}
+    - {box: [0.1119, 0.6659, 0.1578, 0.2873], at: 3.0, label: "Чужие бренды"}
+  assets:
+  - 'imports/search_queries.png — скриншот отчёта «Поисковые запросы» (Директ)'
+- id: s04
+  type: infographic
+  duration: 5
+  generator: local
+  voiceover: Решение — раз в неделю смотрите отчёт и добавляйте чужие бренды в минус-слова.
+  visual: Карточка с решением
+  local:
+    kind: card
+    title: Что делать
+    bullets:
+    - Отчёт по запросам — раз в неделю
+    - Чужие бренды и «тц» — в минус-слова
+- id: s05
+  type: screenshot
+  duration: 6
+  generator: local
+  voiceover: Вторая проблема — одни автоцели. Настройте цель на реальную заявку.
+  visual: Скриншот целей в Метрике — только автоцели
+  local:
+    kind: screenshot
+    image: metrika_goals.png
+    caption: Целей нет — только автоцели
+    crop: [0.0045, 0.1613, 0.2001, 0.8065]
+    highlights:
+    - {box: [0.0171, 0.1818, 0.1706, 0.7566], at: 1.0, label: "Нет цели «заявка»"}
+  assets:
+  - 'imports/metrika_goals.png — скриншот «Цели» в Метрике'
+- id: s06
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: detective_magnifier
+  voiceover: И проверьте сайт — медленная посадочная съедает бюджет.
+  visual: Кот-детектив изучает сайт через лупу
+  animation: Кот водит лупой по экрану, затем смотрит в камеру
+  prompts:
+    kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind
+      the lens, then it lowers the glass and looks at the camera, desk lamp light flickers softly,
+      ears stay folded, static camera
+- id: s07
+  type: talking
+  duration: 4
+  generator: kling
+  reference: pointing_viewer
+  voiceover: Пишите «аудит» в комментариях — посмотрю вашу рекламу.
+  visual: Кот указывает лапой на зрителя
+  prompts:
+    kling: The cat points its paw at the viewer and talks with a friendly, confident expression, nods at the
+      end, blinks, office lights shimmer in the background, ears stay folded, static camera
+publication:
+  titles:
+  - Почему Яндекс Директ сливает бюджет
+  - Магазин Apple платит за «samsung»
+  cover_titles:
+  - Директ сливает бюджет?
+  - Куда уходят деньги
+  cover_time: 1.0
+  description: 'Разбираем реальный обезличенный отчёт по поисковым запросам: реклама магазина Apple показывается
+    по запросам про другие бренды и торговый центр. Плюс проверяем цели в Метрике и посадочную страницу.'
+  hashtags:
+  - яндексдирект
+  - контекстнаяреклама
+  - интернетмаркетинг
+  - минусслова
+  - маркетинг
+  - мяуркетинг
