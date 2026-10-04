@@ -70,9 +70,10 @@ kling:
   i2v_model: kling-2.6          # kling-2.6 | kling-2.5-turbo | kling-3.0-turbo
   resolution: 720p              # 720p дешевле; 1080p — для финального качества
   avatar_mode: std              # std | pro
-  # Говорящие сцены: motion_lipsync — живая анимация всего кадра + синхронизация губ (Lip Sync);
-  #                  avatar — дешевле, но двигается в основном мордочка. Можно задать в сцене: local.talking_mode
-  talking_mode: motion_lipsync
+  # Говорящие сцены: avatar — синхронизация губ по фото (работает с котом);
+  #   motion_lipsync — живая анимация + Lip Sync, НО Lip Sync Kling распознаёт только людей (проверено 2026-10-04:
+  #   «The model did not detect a human») — для кота даёт анимацию без движения губ. Можно задать в сцене: local.talking_mode
+  talking_mode: avatar
 hedra:
   model: hedra-character-3
   resolution: 720p

@@ -265,14 +265,20 @@ class KlingProvider(VideoProvider):
         video_id = next((o.get("id") for o in st.raw.get("outputs") or [] if o.get("type") == "video"), None)
         if not video_id:
             return TaskState(task_id=task_id, status="failed", message="Kling не вернул id анимации для lip-sync")
-        face = self._check(http_json("POST", f"{self.base}/v1/videos/identify-face", headers=self._headers(),
-                                     json_body={"video_id": str(video_id)}, timeout=self.timeout,
-                                     safe_to_retry=False)).get("data") or {}
+        no_face = ("Lip Sync не распознал морду кота (Kling синхронизирует губы только у людей). Сцена сохранена "
+                   "как живая анимация без синхронизации губ. Для говорящего кота: kling.talking_mode: avatar")
+        try:
+            face = self._check(http_json("POST", f"{self.base}/v1/videos/identify-face", headers=self._headers(),
+                                         json_body={"video_id": str(video_id)}, timeout=self.timeout,
+                                         safe_to_retry=False)).get("data") or {}
+        except ProviderError as e:
+            if e.code == 1201 or "detect a human" in str(e) or "face" in str(e).lower():
+                # Окончательный отказ: не повторяем — отдаём уже оплаченную анимацию
+                return TaskState(task_id=task_id, status="succeeded", video_url=st.video_url, message=no_face)
+            raise
         faces = face.get("face_data") or []
         if not faces or not face.get("session_id"):
-            return TaskState(task_id=task_id, status="failed", video_url=st.video_url,
-                             message="Lip Sync не нашёл морду кота в анимации — для этой сцены используйте "
-                                     "kling.talking_mode: avatar")
+            return TaskState(task_id=task_id, status="succeeded", video_url=st.video_url, message=no_face)
         audio = Path(ctx.get("audio") or "")
         if not audio.exists():
             return TaskState(task_id=task_id, status="failed", message=f"нет аудио для lip-sync: {audio}")

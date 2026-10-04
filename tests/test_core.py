@@ -391,3 +391,82 @@ def test_kling_motion_lipsync_chain(settings, tmp_path, monkeypatch):
                        extra={"audio_seconds": 3.0})
     unit = pricing["kling"]["unit_usd"]
     assert k.estimate_usd(req, pricing) == pytest.approx((0.3 * 5 + 0.5 + 0.05) * unit)
+
+
+def test_web_panel_api(settings):
+    import threading
+    import time
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+    from studio.character.library import CharacterLibrary
+    from studio.web.server import App, make_handler
+
+    for r in CharacterLibrary(settings).references():
+        CharacterLibrary(settings).set_status(r["id"], "approved")
+    settings.data["override_generator"] = "mock"
+    app = App(settings)
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    port = httpd.server_address[1]
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{port}"
+
+    def get(u):
+        return json.loads(urllib.request.urlopen(base + u).read())
+
+    def post(u, body, token=app.token):
+        req = urllib.request.Request(base + u, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "X-Token": token})
+        try:
+            return json.loads(urllib.request.urlopen(req).read())
+        except urllib.error.HTTPError as e:
+            return {"code": e.code, **json.loads(e.read() or b"{}")}
+
+    try:
+        assert "МяуРкетинг" in urllib.request.urlopen(base + "/").read().decode()
+        assert post("/api/new", {"template": "01-direct-budget"}, token="wrong")["code"] == 403
+        ep = post("/api/new", {"template": "01-direct-budget"})["id"]
+        d = get(f"/api/episode/{ep}")
+        assert d["status"] == "draft" and len(d["scenes"]) == 5 and "video_usd" in d["estimate"]
+        # платное действие без подтверждения запрещено
+        assert "error" in post(f"/api/episode/{ep}/action", {"action": "voice"})
+        assert post(f"/api/episode/{ep}/action", {"action": "approve_script"})["ok"]
+        import studio.generation.voice as vmod
+        from studio.integrations.tts import MockTTS
+        orig = vmod.tts_provider
+        vmod.tts_provider = lambda name, s: MockTTS(s)
+        try:
+            t = post(f"/api/episode/{ep}/action", {"action": "voice", "confirm": True})["task"]
+            for _ in range(100):
+                if get(f"/api/task/{t}")["status"] != "running":
+                    break
+                time.sleep(0.2)
+            assert get(f"/api/task/{t}")["status"] == "done", get(f"/api/task/{t}")
+        finally:
+            vmod.tts_provider = orig
+        d = get(f"/api/episode/{ep}")
+        assert all(sc["has_audio"] for sc in d["scenes"])
+        # медиа отдаются только из папки проекта
+        assert urllib.request.urlopen(f"{base}/media/{ep}/audio/s01.wav").status == 200
+        with pytest.raises(urllib.error.HTTPError):
+            urllib.request.urlopen(f"{base}/media/{ep}/..%2F..%2Fconfig%2Fstudio.yaml")
+    finally:
+        httpd.shutdown()
+
+
+def test_lipsync_no_human_falls_back_to_animation(settings, monkeypatch):
+    from studio.integrations import kling as kmod
+    from studio.integrations.base import ProviderError
+
+    def fake_http(method, url, headers, json_body=None, params=None, timeout=60, retries=4, safe_to_retry=True):
+        if url.endswith("/tasks"):
+            return {"code": 0, "data": [{"id": "i1", "status": "succeeded",
+                                         "outputs": [{"type": "video", "id": "v1", "url": "http://x/anim.mp4"}]}]}
+        if url.endswith("/identify-face"):
+            raise ProviderError("HTTP 400: {'code': 1201, 'message': 'The model did not detect a human'}",
+                                status=400, code=1201)
+        raise AssertionError(url)
+
+    monkeypatch.setenv("KLING_API_KEY", "api-key-kling-test")
+    monkeypatch.setattr(kmod, "http_json", fake_http)
+    st = kmod.KlingProvider(settings).poll("chain:i2v:i1", "motion_lipsync", {"audio": "x", "job_id": "j"})
+    assert st.status == "succeeded" and st.video_url == "http://x/anim.mp4" and "Lip Sync" in st.message

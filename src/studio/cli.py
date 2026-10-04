@@ -396,6 +396,12 @@ def cmd_pipeline(a, s):
     return 0 if rep.passed else 2
 
 
+def cmd_web(a, s):
+    from .web.server import serve
+    serve(s, port=a.port, open_browser=not a.no_browser)
+    return 0
+
+
 def cmd_costs(a, s):
     db = _db(s)
     st = Budget(s, db).status(a.episode)
@@ -547,6 +553,11 @@ def build_parser() -> argparse.ArgumentParser:
     pl.add_argument("--mock", action="store_true", help="бесплатный тестовый прогон на копии проекта")
     pl.add_argument("--yes", action="store_true")
     pl.set_defaults(fn=cmd_pipeline)
+
+    wb = sub.add_parser("web", help="веб-панель управления в браузере (локально)")
+    wb.add_argument("--port", type=int, default=8765)
+    wb.add_argument("--no-browser", action="store_true", help="не открывать браузер автоматически")
+    wb.set_defaults(fn=cmd_web)
 
     co = sub.add_parser("costs", help="расходы и бюджет")
     co.add_argument("episode", nargs="?")

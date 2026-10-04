@@ -350,6 +350,9 @@ class Runner:
             fields["result_url"] = st.video_url
         if st.message and st.status == "failed":
             fields["error"] = st.message
+        if st.message and st.status == "succeeded":
+            fields["error"] = f"предупреждение: {st.message}"
+            print(f"  {job['scene_id']}: {st.message}")
         if (st.billed_units is not None and job["provider"] == "kling" and st.status in ("succeeded", "failed")
                 and job.get("actual_cost_usd") is None):
             unit = float(self.s.load_yaml("config/pricing.yaml").get("kling", {}).get("unit_usd", 0.14))
