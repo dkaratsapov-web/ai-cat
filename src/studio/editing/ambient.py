@@ -74,7 +74,8 @@ def _edge_point(rng: random.Random, w: int, h: int) -> tuple[float, float]:
             return x, y
 
 
-def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg: dict, seed: str = "") -> Path:
+def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg: dict, seed: str = "",
+                  progress: str = "") -> Path:
     w, h, fps = settings.get("video.width"), settings.get("video.height"), settings.get("video.fps")
     n = max(1, round(duration * fps))
     rng = random.Random(seed or src.name)
@@ -104,8 +105,10 @@ def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg
             base.alpha_composite(vign)
         light_levels.append(base)
 
-    dec = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", str(src), "-f", "rawvideo",
-                            "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-"], stdout=subprocess.PIPE)
+    # Декодер отдаёт ровно n кадров; его служебные сообщения не выводим (иначе «Broken pipe» пугает в консоли)
+    dec = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "quiet", "-i", str(src), "-frames:v", str(n),
+                            "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     enc = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
                             "-s", f"{w}x{h}", "-r", str(fps), "-i", "-", "-frames:v", str(n),
                             "-c:v", settings.get("video.codec", "libx264"), "-preset", "veryfast",
@@ -148,12 +151,17 @@ def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg
             if grains:
                 img = Image.blend(img, grains[i % len(grains)], grain_amt)
             enc.stdin.write(img.tobytes())
+            if progress and (i + 1) % max(1, n // 4) == 0:
+                print(f"    живой слой {progress}: {int((i + 1) / n * 100)}%", flush=True)
         enc.stdin.close()
     except OSError:
         pass
     finally:
         dec.stdout.close()
-        dec.wait()
+        try:
+            dec.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            dec.kill()
     err = enc.stderr.read().decode(errors="ignore") if enc.stderr else ""
     if enc.wait() != 0:
         raise RuntimeError(f"Живой слой: ffmpeg не смог записать {out.name}: {err[-500:]}")

@@ -86,7 +86,7 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
     if amb.get("enabled") and sc.type in amb.get("apply_to", []):
         # «Живой слой»: камера, свет, огоньки, пылинки — поверх AI-клипа (бесплатно)
         base = normalize_clip(src, out.with_name(f"{sc.id}.base.mp4"), length, project.settings)
-        return apply_ambient(base, out, length, project.settings, amb, seed=sc.id)
+        return apply_ambient(base, out, length, project.settings, amb, seed=sc.id, progress=sc.id)
     return normalize_clip(src, out, length, project.settings)
 
 
@@ -155,6 +155,11 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
         raise AssemblyError(f"Сценарий не утверждён или изменён после утверждения: studio script approve {project.id}")
     lib = CharacterLibrary(settings)
     items = build_timeline(project, script)
+    # Сначала проверяем, что все AI-сцены скачаны, — чтобы не ждать монтаж впустую
+    missing = [it.scene.id for it in items if it.scene.generator != "local" and not project.scene_source(it.scene.id)]
+    if missing:
+        raise AssemblyError(f"Ещё нет видео сцен: {', '.join(missing)}. Дождитесь генерации: "
+                            f"studio status {project.id} --refresh (повторяйте, пока все не станут succeeded)")
     use_xfade = settings.get("video.transition") == "xfade" and len(items) > 1
     d = float(settings.get("video.transition_duration", 0.25)) if use_xfade else 0.0
 
