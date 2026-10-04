@@ -13,6 +13,10 @@ from .integrations import tts_provider, video_provider
 REQUIRED_FILTERS = ("ass", "xfade", "loudnorm", "blackdetect", "silencedetect", "sidechaincompress", "tpad")
 
 
+# Публичные префиксы ключей (видны в кабинетах) — помогают сверить, тот ли ключ вписан
+KNOWN_PREFIXES = {"KLING_API_KEY": "api-key-kling-"}
+
+
 def key_shape(val: str | None) -> str:
     """Форма ключа без раскрытия значения: длина и подозрительные символы."""
     if not val:
@@ -73,6 +77,12 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
                  "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID",
                  "HEDRA_API_KEY", "RUNWAYML_API_SECRET"):
         src = "" if not os.environ.get(name) or name in DOTENV_KEYS else "  ⚠ взят из переменных Windows, а не из .env"
+        val = (os.environ.get(name) or "").strip()
+        if name == "KLING_API_KEY" and val and not val.startswith("api-key-kling-"):
+            src += "  ⚠ ключи Kling начинаются с «api-key-kling-» — похоже, вписано не то значение"
+        if val and name in KNOWN_PREFIXES:
+            pre = KNOWN_PREFIXES[name]
+            src += f"  (начало: {val[:len(pre) + 4]}…, сверьте с кабинетом)" if val.startswith(pre) else ""
         print(f"       {name:<22} {key_shape(os.environ.get(name))}{src}")
 
     for name in ("kling", "hedra", "runway"):
