@@ -108,7 +108,9 @@ def resolve_image(project_path: Path, settings: Settings, rel: str) -> Path:
     """Картинка сцены: только внутри imports/ и images/ проекта или assets/ — и только настоящее изображение.
 
     Защита от отправки в платный API произвольного файла (например, .env) под видом кадра."""
-    bases = [project_path / "imports", project_path / "images", settings.assets_dir]
+    # Свои файлы проекта важнее; затем общие материалы шаблонов (assets/templates/media) и assets/
+    bases = [project_path / "imports", project_path / "images", settings.assets_dir / "templates" / "media",
+             settings.assets_dir]
     for base in bases:
         base_r = base.resolve()
         p = (base / rel).resolve()
