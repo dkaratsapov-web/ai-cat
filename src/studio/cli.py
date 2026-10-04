@@ -51,6 +51,9 @@ def cmd_character(a, s):
         if a.all_pending:
             ids += [r["id"] for r in lib.references("pending") if r["id"] not in ids]
         if not ids:
+            if a.all_pending:
+                print("Нет кадров, ожидающих утверждения, — все уже обработаны (studio character list).")
+                return 0
             raise CharacterError("Укажите id референсов (через пробел) или --all-pending")
         for rid in ids:
             r = lib.set_status(rid, "approved" if a.action == "approve" else "rejected", a.note or "")
