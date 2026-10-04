@@ -121,6 +121,20 @@ class KlingProvider(VideoProvider):
             raise ProviderError(f"Kling code={code}: {data.get('message')}", code=code)
         return data
 
+    @staticmethod
+    def explain(err: Exception) -> str:
+        """Человеческое пояснение к частым ошибкам авторизации/оплаты Kling (по таблице Error Codes)."""
+        text = str(err)
+        if "1002" in text or "api key not found" in text or "1000" in text or "1001" in text:
+            return ("Kling не узнаёт ключ: в .env записан не сам ключ. Создайте новый на kling.ai/dev/api-key и "
+                    "скопируйте КНОПКОЙ в окне сразу после создания (в таблице он показан со звёздочками). "
+                    "Строка в .env: KLING_API_KEY=ключ — без пробелов и кавычек.")
+        if "1102" in text:
+            return "Пакет единиц API закончился или не куплен: kling.ai/dev → API Purchase → Video API."
+        if "1103" in text:
+            return "Нет доступа к модели/API для этого аккаунта — проверьте пакет Video API."
+        return ""
+
     # ------------------------------------------------------------ pricing
     def billed_duration(self, req: VideoRequest) -> float:
         if req.kind == "avatar":

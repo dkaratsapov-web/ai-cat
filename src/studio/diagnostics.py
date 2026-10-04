@@ -5,12 +5,33 @@ import os
 import sys
 
 from .character.library import CharacterError, CharacterLibrary
-from .config import Settings, redact
+from .config import DOTENV_KEYS, Settings, redact
 from .editing import ffmpeg
 from .editing.fonts import font_path, project_fonts
 from .integrations import tts_provider, video_provider
 
 REQUIRED_FILTERS = ("ass", "xfade", "loudnorm", "blackdetect", "silencedetect", "sidechaincompress", "tpad")
+
+
+def key_shape(val: str | None) -> str:
+    """Форма ключа без раскрытия значения: длина и подозрительные символы."""
+    if not val:
+        return "—"
+    problems = []
+    if "*" in val or "•" in val or "…" in val:
+        problems.append("звёздочки/точки — скопирована СКРЫТАЯ версия из таблицы")
+    if val != val.strip():
+        problems.append("пробел или перевод строки по краям")
+    if " " in val.strip():
+        problems.append("пробел внутри")
+    if any(c in val for c in "\"'«»"):
+        problems.append("кавычки")
+    if any("а" <= c.lower() <= "я" or c.lower() == "ё" for c in val):
+        problems.append("русские буквы")
+    if not val.isascii():
+        problems.append("не-латинские символы")
+    note = f"задан, длина {len(val.strip())}"
+    return note + ("  ⚠ " + "; ".join(problems) if problems else "")
 
 
 def run_doctor(settings: Settings, check_api: bool = False) -> bool:
@@ -51,7 +72,8 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
     for name in ("KLING_API_KEY", "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "YANDEX_API_KEY", "YANDEX_FOLDER_ID",
                  "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID",
                  "HEDRA_API_KEY", "RUNWAYML_API_SECRET"):
-        print(f"       {name:<22} {'задан' if os.environ.get(name) else '—'}")
+        src = "" if not os.environ.get(name) or name in DOTENV_KEYS else "  ⚠ взят из переменных Windows, а не из .env"
+        print(f"       {name:<22} {key_shape(os.environ.get(name))}{src}")
 
     for name in ("kling", "hedra", "runway"):
         prov = video_provider(name, settings)
@@ -63,6 +85,9 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
                 line("OK", f"  подключение {name}", redact(str(info))[:400])
             except Exception as e:  # noqa: BLE001 — диагностика должна показать любую ошибку
                 line("FAIL", f"  подключение {name}", redact(str(e))[:400])
+                hint = getattr(prov, "explain", lambda _e: "")(e)
+                if hint:
+                    print(f"       → {hint}")
     tts = tts_provider(settings.get("providers.tts", "elevenlabs"), settings)
     c, why = tts.configured()
     line("OK" if c else "WARN", f"TTS: {tts.name}", why)

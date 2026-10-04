@@ -24,6 +24,9 @@ def find_root(start: Path | None = None) -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+DOTENV_KEYS: set[str] = set()  # какие переменные заданы именно в .env (для диагностики)
+
+
 def load_dotenv(path: Path) -> None:
     """Минимальный парсер .env без внешних зависимостей. Не перезаписывает уже заданные переменные."""
     if not path.exists():
@@ -35,6 +38,8 @@ def load_dotenv(path: Path) -> None:
         key, _, value = line.partition("=")
         key = key.strip()
         value = value.strip().strip('"').strip("'")
+        if key and value:
+            DOTENV_KEYS.add(key)
         if key and key not in os.environ:
             os.environ[key] = value
 
