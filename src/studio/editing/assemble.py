@@ -171,6 +171,7 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
         lengths.append(it.duration)
 
     work = project.dir("work")
+    print(f"  склейка {len(clips)} сцен с переходами…", flush=True)
     video = concat_video(clips, lengths, work / "video.mp4", settings)
     voice = build_voice_track(items, work / "voice.wav", settings)
     total = round(sum(lengths), 3)
@@ -214,6 +215,7 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
         "-b:a", settings.get("video.audio_bitrate", "192k"), "-ar", str(settings.get("video.audio_sample_rate", 48000)),
         "-t", f"{total:.3f}", "-movflags", "+faststart", out,
     ]
+    print("  финальный рендер: голос, субтитры, громкость (1–5 минут)…", flush=True)
     ffmpeg.run(args)
     (project.dir("output") / "timeline.json").write_text(json.dumps(
         [{"scene": it.scene.id, "start": it.start, "duration": it.duration, "type": it.scene.type,
