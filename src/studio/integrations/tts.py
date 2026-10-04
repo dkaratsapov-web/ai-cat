@@ -217,6 +217,7 @@ class YandexTTS(TTSProvider):
         raw.write_bytes(pcm)
         subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "s16le", "-ar", str(YC_SAMPLE_RATE),
                         "-ac", "1", "-i", str(raw), "-ar", "48000", str(dest)], check=True)
+        raw.unlink(missing_ok=True)  # промежуточный файл больше не нужен
         words = []
         for c in chunks:
             for w in c.get("wordTimings") or []:
