@@ -470,3 +470,17 @@ def test_lipsync_no_human_falls_back_to_animation(settings, monkeypatch):
     monkeypatch.setattr(kmod, "http_json", fake_http)
     st = kmod.KlingProvider(settings).poll("chain:i2v:i1", "motion_lipsync", {"audio": "x", "job_id": "j"})
     assert st.status == "succeeded" and st.video_url == "http://x/anim.mp4" and "Lip Sync" in st.message
+
+
+def test_stale_job_does_not_overwrite_newer_scene(settings, tmp_path):
+    from studio.generation.runner import Runner
+    from studio.project import create_project
+    proj = create_project(template(), settings, episode_id="ep-stale")
+    db = DB(settings.db_path)
+    old = db.create_job(episode="ep-stale", scene_id="s01", provider="mock", kind="motion_lipsync", model="m",
+                        params={}, idempotency_key="a", est_cost_usd=0, status="processing")
+    import time; time.sleep(1.1)
+    db.create_job(episode="ep-stale", scene_id="s01", provider="mock", kind="avatar", model="m",
+                  params={}, idempotency_key="b", est_cost_usd=0, status="succeeded")
+    db.update_job(old, status="succeeded", result_url="file:///nonexistent.mp4")
+    assert Runner(proj, db)._download(db.get_job(old)) is None

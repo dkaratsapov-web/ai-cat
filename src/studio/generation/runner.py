@@ -380,8 +380,19 @@ class Runner:
             video_provider(job["provider"], self.s).download(job["result_url"], dest)
             print(f"  {scene_id}: результат скачан повторно (без оплаты)")
 
+    def _superseded(self, job: dict) -> bool:
+        """Есть ли более новая готовая версия этой сцены (тогда старую задачу не скачиваем поверх)."""
+        for j in self.db.jobs_for(self.p.id, job["scene_id"]):
+            if (j["id"] != job["id"] and j["kind"] != "tts" and j["status"] in DONE_STATUSES
+                    and j["created_at"] > job["created_at"]):
+                return True
+        return False
+
     def _download(self, job: dict) -> Path | None:
         if not job.get("result_url"):
+            return None
+        if self._superseded(job):
+            print(f"  {job['scene_id']}: задача {job['id'][:8]} устарела — есть более новая версия сцены, не перезаписываю")
             return None
         dest = self._result_file(job)
         prov = video_provider(job["provider"], self.s)
