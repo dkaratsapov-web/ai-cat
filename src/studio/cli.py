@@ -5,6 +5,7 @@ import argparse
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -132,6 +133,26 @@ def cmd_script(a, s):
     elif a.action == "validate":
         warnings = proj.load_script().validate(s.get("video.min_duration"), s.get("video.max_duration"))
         print("Сценарий корректен." + ("".join(f"\n  ! {w}" for w in warnings)))
+    elif a.action == "load":
+        if not a.source:
+            raise ProjectError("Укажите шаблон или файл: studio script load <эпизод> --from <шаблон|путь.yaml>")
+        src = s.root / TEMPLATES_DIR / f"{a.source}.yaml"
+        if not src.exists():
+            src = Path(a.source)
+        if not src.is_file():
+            raise ProjectError(f"Не найден шаблон или файл: {a.source} (studio templates)")
+        script = Script.load(src)
+        script.id = proj.id
+        script.validate(s.get("video.min_duration"), s.get("video.max_duration"))
+        old = proj.script_path
+        if old.exists():
+            backup = old.with_name(f"script.prev-{int(time.time())}.yaml")
+            backup.write_bytes(old.read_bytes())
+            print(f"Прежний сценарий сохранён: {backup.name}")
+        proj.save_script(script)
+        _db(s).log("load_script", {"source": str(a.source)}, episode=proj.id)
+        print(f"Сценарий {proj.id} заменён ({len(script.scenes)} сцен). Утверждение снято.\n"
+              f"Дальше: studio script show {proj.id} — раскадровка и смета (готовые сцены переиспользуются)")
     elif a.action == "approve":
         script = proj.approve_script()
         _db(s).log("approve_script", {"fingerprint": script.fingerprint()}, episode=proj.id)
@@ -457,9 +478,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("list", help="проекты").set_defaults(fn=cmd_list)
 
-    sc = sub.add_parser("script", help="сценарий: show | validate | approve")
-    sc.add_argument("action", choices=["show", "validate", "approve"])
+    sc = sub.add_parser("script", help="сценарий: show | validate | approve | load")
+    sc.add_argument("action", choices=["show", "validate", "approve", "load"])
     sc.add_argument("episode")
+    sc.add_argument("--from", dest="source", help="(load) имя шаблона или путь к script.yaml")
     sc.set_defaults(fn=cmd_script)
 
     se = sub.add_parser("scene", help="изменить сцену или импортировать готовый клип")

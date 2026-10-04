@@ -84,6 +84,11 @@ class Tasks:
         return running[-1] if running else None
 
 
+# Типы медиа задаём явно: на Windows mimetypes берёт их из реестра, где встречаются неверные значения.
+MEDIA_TYPES = {".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".mp4": "video/mp4",
+               ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+
+
 def _safe_file(base: Path, rel: str) -> Path | None:
     p = (base / unquote(rel)).resolve()
     if not p.is_relative_to(base.resolve()) or not p.is_file():
@@ -111,6 +116,8 @@ def episode_detail(p: Project, s: Settings, db: DB) -> dict:
     pricing = s.load_yaml("config/pricing.yaml")
     lib = CharacterLibrary(s)
     refs = {r["id"]: r for r in lib.references()}
+    approved = lib.references("approved")
+    default_ref = approved[0] if approved else None  # без `reference` генерация берёт первый утверждённый
 
     video_est: dict[str, dict] = {}
     video_total = 0.0
@@ -137,6 +144,8 @@ def episode_detail(p: Project, s: Settings, db: DB) -> dict:
         meta = scene_voice_meta(p, sc.id)
         src = p.scene_source(sc.id)
         ref = refs.get(sc.reference) if sc.reference else None
+        if not sc.reference and sc.generator in ("kling", "hedra", "runway"):
+            ref = default_ref
         img = None
         if sc.generator == "local" and sc.local.get("image"):
             img = sc.local["image"]
@@ -146,7 +155,8 @@ def episode_detail(p: Project, s: Settings, db: DB) -> dict:
             "id": sc.id, "type": sc.type, "type_ru": SCENE_TYPES.get(sc.type, sc.type), "generator": sc.generator,
             "paid": sc.generator in ("kling", "hedra", "runway"), "start": round(t, 1), "duration": round(dur, 1),
             "voiceover": sc.voiceover, "visual": sc.visual, "animation": sc.animation,
-            "reference": sc.reference, "reference_file": ref["file"] if ref else None,
+            "reference": sc.reference or (f"{ref['id']} (по умолчанию)" if ref else None),
+            "reference_file": ref["file"] if ref else None,
             "local_kind": sc.local.get("kind"), "local_image": img, "caption": sc.local.get("caption"),
             "title": sc.local.get("title"), "bullets": sc.local.get("bullets"),
             "has_audio": bool(meta), "audio_duration": meta["duration"] if meta else None,
@@ -293,16 +303,23 @@ def make_handler(app: App):
                 self.send_error(404)
                 return
             size = path.stat().st_size
-            ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+            ctype = (MEDIA_TYPES.get(path.suffix.lower()) or mimetypes.guess_type(path.name)[0]
+                     or "application/octet-stream")
             start, end = 0, size - 1
             rng = self.headers.get("Range")
-            if rng and (m := re.match(r"bytes=(\d*)-(\d*)", rng)):
+            if rng and (m := re.match(r"bytes=(\d*)-(\d*)$", rng.strip())) and (m.group(1) or m.group(2)):
                 if m.group(1):
                     start = int(m.group(1))
                     end = int(m.group(2)) if m.group(2) else end
-                elif m.group(2):
+                else:
                     start = max(0, size - int(m.group(2)))
                 end = min(end, size - 1)
+                if start > end:  # диапазон вне файла (или пустой файл): иначе отрицательная Content-Length
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{size}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
                 self.send_response(206)
                 self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
             else:

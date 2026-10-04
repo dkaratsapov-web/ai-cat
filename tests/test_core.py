@@ -38,7 +38,7 @@ def test_templates_valid():
     for p in (ROOT / "assets/templates/scripts").glob("*.yaml"):
         s = Script.load(p)
         s.validate()
-        assert 20 <= s.planned_duration <= 35, p.name
+        assert 20 <= s.planned_duration <= 60, p.name
 
 
 def test_script_rejects_unknown_fields():
@@ -427,6 +427,8 @@ def test_web_panel_api(settings):
         ep = post("/api/new", {"template": "01-direct-budget"})["id"]
         d = get(f"/api/episode/{ep}")
         assert d["status"] == "draft" and len(d["scenes"]) == 5 and "video_usd" in d["estimate"]
+        # превью платных сцен без `reference` — первый утверждённый референс (его же возьмёт генерация)
+        assert all(sc["reference_file"] for sc in d["scenes"] if sc["paid"])
         # платное действие без подтверждения запрещено
         assert "error" in post(f"/api/episode/{ep}/action", {"action": "voice"})
         assert post(f"/api/episode/{ep}/action", {"action": "approve_script"})["ok"]
@@ -446,7 +448,17 @@ def test_web_panel_api(settings):
         d = get(f"/api/episode/{ep}")
         assert all(sc["has_audio"] for sc in d["scenes"])
         # медиа отдаются только из папки проекта
-        assert urllib.request.urlopen(f"{base}/media/{ep}/audio/s01.wav").status == 200
+        r = urllib.request.urlopen(f"{base}/media/{ep}/audio/s01.wav")
+        assert r.status == 200 and r.headers["Content-Type"] == "audio/wav"
+        size = int(r.headers["Content-Length"])
+        # плеер браузера запрашивает диапазоны; диапазон за концом файла — 416, а не битый ответ
+        rq = urllib.request.Request(f"{base}/media/{ep}/audio/s01.wav", headers={"Range": "bytes=0-99"})
+        r = urllib.request.urlopen(rq)
+        assert r.status == 206 and len(r.read()) == 100 and r.headers["Content-Range"] == f"bytes 0-99/{size}"
+        rq = urllib.request.Request(f"{base}/media/{ep}/audio/s01.wav", headers={"Range": f"bytes={size + 10}-"})
+        with pytest.raises(urllib.error.HTTPError) as ei:
+            urllib.request.urlopen(rq)
+        assert ei.value.code == 416
         with pytest.raises(urllib.error.HTTPError):
             urllib.request.urlopen(f"{base}/media/{ep}/..%2F..%2Fconfig%2Fstudio.yaml")
     finally:

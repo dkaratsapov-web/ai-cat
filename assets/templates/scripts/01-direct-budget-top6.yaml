@@ -1,0 +1,192 @@
+id: template
+title: ТОП-6 причин, почему Директ сливает бюджет
+content_type: expert
+topic: Шесть настроек Яндекс Директа и Метрики, через которые чаще всего утекает бюджет
+idea: 'Обратный отсчёт: шесть проверок, которые можно сделать в своём кабинете сегодня'
+audience: Владельцы интернет-магазинов и маркетологи, которые сами ведут Директ
+problem: Бюджет уходит на нецелевые запросы, мусорные площадки и нецелевую аудиторию, а посадочная теряет людей
+format: 'ТОП-6 обратным отсчётом: кот открывает и закрывает, пункты — карточки и макеты отчётов'
+target_duration: 55
+tone: уверенно, по делу, лёгкая ирония
+hook: Директ сливает бюджет? Смотрите, куда уходят деньги.
+cta: Пишите «аудит» в комментариях — посмотрю вашу рекламу.
+voice_preset: default
+disclaimer: Отчёт по запросам — иллюстрация, данные условные. Корректировки — ориентир, решение зависит от ниши
+scenes:
+- id: s01
+  type: talking
+  duration: 3.5
+  generator: kling
+  reference: closeup_front
+  voiceover: Директ сливает бюджет? Смотрите, куда уходят деньги.
+  visual: Крупный план — кот смотрит в камеру, слегка наклоняет голову
+  prompts:
+    kling: The cat talks to the camera with a confident, slightly ironic look, tilts its head, raises one paw a
+      little, blinks, monitors flicker softly in the background, ears stay folded, static camera
+- id: s02
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: shock_monitor
+  voiceover: Топ-шесть дыр, через которые утекают деньги. Поехали.
+  visual: Кот в шоке смотрит на монитор с падающим графиком
+  animation: Кот отшатывается от экрана и поворачивается к камере, экран мерцает
+  prompts:
+    kling: The cat leans back from the monitor in shock, paws near its face, then turns its head to the camera,
+      the falling red chart on the screen flickers, warm office lights in the background, ears stay folded, static
+      camera
+- id: s05
+  type: screenshot
+  duration: 6
+  generator: local
+  voiceover: Шестое место — цели. В Метрике только автоцели? Сделайте цель на реальную заявку.
+  visual: Скриншот целей в Метрике — только автоцели
+  local:
+    kind: screenshot
+    image: metrika_goals.png
+    caption: №6 Нет цели на заявку
+    crop:
+    - 0.0239
+    - 0.2125
+    - 0.3708
+    - 0.6801
+    highlights:
+    - box:
+      - 0.0329
+      - 0.2285
+      - 0.3469
+      - 0.6483
+      at: 1.0
+      label: Нет цели «заявка»
+  assets:
+  - imports/metrika_goals.png — макет целей Метрики (перерисованный ChatGPT, 1672×941; содержимое совпадает с реальным)
+- id: s06
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: detective_magnifier
+  voiceover: 'Пятое место — посадочная. Пройдите путь клиента сами: страница грузится, форма отправляется?'
+  visual: Кот-детектив изучает сайт через лупу. №5 Посадочная
+  animation: Кот водит лупой по экрану, затем смотрит в камеру
+  prompts:
+    kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
+      lens, then it lowers the glass and looks at the camera, desk lamp light flickers softly, ears stay folded,
+      static camera
+- id: s10
+  type: infographic
+  duration: 8
+  generator: local
+  voiceover: Четвёртое — корректировки ставок. До восемнадцати лет — минус сто процентов, старше пятидесяти пяти
+    — по нише. Мобильные на старте можно выключить.
+  subtitle: Четвёртое — корректировки ставок. До 18 лет — минус 100%, старше 55 — по нише. Мобильные на старте можно
+    выключить.
+  visual: Карточка №4 с корректировками
+  local:
+    kind: card
+    title: №4 Корректировки ставок
+    bullets:
+    - 'До 18 лет: −100%'
+    - 'Старше 55: −100%, если не ваша аудитория'
+    - 'Мобильные: аккуратно, на старте можно выключить'
+    footnote: Ориентир, решение зависит от ниши
+- id: s09
+  type: infographic
+  duration: 6
+  generator: local
+  voiceover: 'Третье — площадки в рекламной сети. Откройте отчёт по площадкам: приложения «ком» и площадки «ди-эс-пи»
+    — в исключения.'
+  subtitle: 'Третье — площадки в РСЯ. Откройте отчёт по площадкам: приложения com.* и площадки dsp-* — в исключения.'
+  visual: Карточка №3 про площадки РСЯ
+  local:
+    kind: card
+    title: №3 Площадки в РСЯ
+    bullets:
+    - Отчёт по площадкам — регулярно
+    - Приложения com.* — в исключения
+    - Площадки dsp-* — в исключения
+    footnote: Смотрите расход и заявки по каждой площадке
+- id: s03
+  type: screenshot
+  duration: 6
+  generator: local
+  voiceover: Второе — чистка запросов. Обои, игры, чехлы для андроида — за клики заплачено, заявок ноль.
+  visual: Макет отчёта «Поисковые запросы» — рамки на мусорных запросах и на расходе
+  local:
+    kind: screenshot
+    image: search_queries.png
+    caption: 'Пример: расход без заявок'
+    crop:
+    - 0.2273
+    - 0.4251
+    - 0.3349
+    - 0.5154
+    highlights:
+    - box:
+      - 0.2344
+      - 0.5441
+      - 0.2171
+      - 0.389
+      at: 0.8
+      label: Мусорные запросы
+    - box:
+      - 0.4516
+      - 0.5441
+      - 0.1077
+      - 0.389
+      at: 2.6
+      label: 0 заявок
+  assets:
+  - imports/search_queries.png — макет отчёта от ChatGPT (1672×941), данные условные
+- id: s04
+  type: infographic
+  duration: 5
+  generator: local
+  voiceover: На старте смотрите отчёт по запросам раз в три дня, потом — раз в неделю. Мусор — в минус-слова.
+  visual: Карточка с решением
+  local:
+    kind: card
+    title: №2 Чистка запросов
+    bullets:
+    - 'Старт: отчёт по запросам раз в 3 дня'
+    - Трафик стал качественным — раз в неделю
+    - Мусорные запросы — в минус-слова
+- id: s08
+  type: infographic
+  duration: 7
+  generator: local
+  voiceover: И первое место — автотаргетинг на поиске. Оставьте целевые и узкие запросы, остальные категории выключите.
+  visual: Карточка №1 про автотаргетинг
+  local:
+    kind: card
+    title: №1 Автотаргетинг на поиске
+    bullets:
+    - 'Оставить: целевые и узкие'
+    - Широкие, сопутствующие, альтернативные — выключить
+    footnote: После запуска проверьте отчёт по запросам
+- id: s07
+  type: talking
+  duration: 4
+  generator: kling
+  reference: pointing_viewer
+  voiceover: Пишите «аудит» в комментариях — посмотрю вашу рекламу.
+  visual: Кот указывает лапой на зрителя
+  prompts:
+    kling: The cat points its paw at the viewer and talks with a friendly, confident expression, nods at the end,
+      blinks, office lights shimmer in the background, ears stay folded, static camera
+publication:
+  titles:
+  - ТОП-6 причин, почему Директ сливает бюджет
+  - 6 дыр в Яндекс Директе, через которые утекают деньги
+  cover_titles:
+  - ТОП-6 дыр в Директе
+  - Куда утекает бюджет
+  cover_time: 1.0
+  description: 'Шесть проверок в Яндекс Директе и Метрике: цели, посадочная, корректировки ставок, площадки в РСЯ,
+    чистка поисковых запросов и автотаргетинг. Данные в отчётах условные.'
+  hashtags:
+  - яндексдирект
+  - контекстнаяреклама
+  - интернетмаркетинг
+  - минусслова
+  - рся
+  - мяуркетинг
