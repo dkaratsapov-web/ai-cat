@@ -9,6 +9,7 @@
 ## Установка
 
 Пошаговая инструкция с нуля для Windows: [docs/START.md](docs/START.md).
+Контент-план на месяц: [docs/CONTENT-PLAN.md](docs/CONTENT-PLAN.md). Паспорт бренда для Claude: [.claude/product-marketing-context.md](.claude/product-marketing-context.md).
 
 Нужны Python ≥ 3.10 и FFmpeg (со сборкой libass, есть в стандартных пакетах).
 
