@@ -4,7 +4,7 @@
 # Перед первой платной генерацией сверьте цены в кабинете и обновите checked.
 
 kling:
-  unit_usd: 0.14                     # 1 Unit = $0.14 (официальная таблица цен API)
+  unit_usd: 0.098                    # Trial Package: $9.8 / 100 units (по прайсу — $0.14; при обычном пакете верните 0.14)
   source: https://kling.ai/document-api/pricing/base/video
   checked: 2026-09-20
   verified: true
