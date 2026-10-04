@@ -315,8 +315,10 @@ def test_voice_samples_command(settings, tmp_path, monkeypatch):
     monkeypatch.setenv("YANDEX_FOLDER_ID", "aje-wrong-folder")
     monkeypatch.setattr(tts_mod.requests, "post", fake_post)
     monkeypatch.setattr(cli, "get_settings", lambda: settings)
-    rc = cli.main(["voice-samples", "--voices", "alena,badvoice,jane", "--pitch", "150", "--yes"])
+    rc = cli.main(["voice-samples", "--voices", "alena,badvoice,jane", "--pitch", "150", "--variants", "1.3", "--yes"])
     assert rc == 0
     files = sorted(p.name for p in (settings.data_dir / "voice_samples").glob("*.wav"))
-    assert files == ["alena_p150_s1.1.wav", "jane_p150_s1.1.wav"]
+    assert files == ["alena_p150_s1.1.wav", "alena_p150_s1.1_cat1.3.wav", "jane_p150_s1.1.wav",
+                     "jane_p150_s1.1_cat1.3.wav"]
+    assert len(calls) == 3  # варианты тона делаются локально, без новых платных запросов
     assert all("x-folder-id" not in h for _, h in calls)  # с API-ключом folder id не отправляется

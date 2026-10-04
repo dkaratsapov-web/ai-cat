@@ -224,6 +224,7 @@ def cmd_voice_samples(a, s):
     from .generation.voice import load_preset
     from .integrations import tts_provider
     from .integrations.base import ProviderError
+    from .integrations.tts import apply_voice_effect
     prov = tts_provider(a.provider, s)
     ok, why = prov.configured()
     if not ok:
@@ -253,9 +254,18 @@ def cmd_voice_samples(a, s):
                       params={"chars": len(a.text)}, idempotency_key=f"sample-{tag}-{a.text}",
                       est_cost_usd=per, status="succeeded")
         made.append(dest)
-        print(f"  {v}: {dest.name}")
-    print(f"\nОбразцы: {out_dir}\nПонравившийся голос впишите в config/voices.yaml (voice: …) и выполните "
-          "studio voice <эпизод> --force")
+        names = [dest.name]
+        for k in _split(a.variants) or []:
+            factor = float(k)
+            if abs(factor - 1.0) < 1e-3:
+                continue
+            var = out_dir / f"{tag}_cat{factor:g}.wav"
+            shutil.copy2(dest, var)
+            apply_voice_effect(var, factor, a.formant)
+            names.append(var.name)
+        print(f"  {v}: {', '.join(names)}")
+    print(f"\nОбразцы: {out_dir}\nФайлы *_catX — тот же голос, обработанный локально (X — во сколько раз выше тон, "
+          "бесплатно).\nНапишите, какой файл понравился, — впишем голос и эффект в config/voices.yaml.")
     if sys.platform == "win32" and made:
         os.startfile(out_dir)  # type: ignore[attr-defined]  # открыть папку в Проводнике
     return 0
@@ -472,6 +482,10 @@ def build_parser() -> argparse.ArgumentParser:
     vs.add_argument("--role", default=None, help="амплуа, например good / friendly / neutral (не у всех голосов)")
     vs.add_argument("--pitch", type=float, default=0.0, help="сдвиг высоты в Гц, например 150 — выше и мягче")
     vs.add_argument("--speed", type=float, default=1.1)
+    vs.add_argument("--variants", default="1.2,1.35,1.5",
+                    help="локальные варианты тона для каждого голоса (бесплатно), например 1.2,1.35,1.5")
+    vs.add_argument("--formant", default="shifted", choices=["shifted", "preserved"],
+                    help="shifted — мультяшный тембр; preserved — тот же голос, но выше")
     vs.add_argument("--provider", default="yandex", choices=["yandex"])
     vs.add_argument("--yes", action="store_true")
     vs.set_defaults(fn=cmd_voice_samples)

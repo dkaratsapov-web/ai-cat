@@ -10,6 +10,7 @@ from ..costs.budget import Budget, CostLine, Estimate
 from ..db import DB
 from ..integrations import tts_provider
 from ..integrations.base import ProviderError
+from ..integrations.tts import apply_voice_effect
 from ..models import Script
 from ..project import Project
 
@@ -110,6 +111,9 @@ def generate_voice(project: Project, db: DB, *, provider_name: str | None = None
             if job_id:  # явный отказ сервера (HTTP-ошибка) — не списано; обрыв связи — считаем оплаченным
                 db.update_job(job_id, status="failed", error=str(e), paid=0 if e.status else 1)
             raise
+        fx = preset.get("effect") or {}
+        if fx.get("pitch"):
+            apply_voice_effect(dest, float(fx["pitch"]), fx.get("formant", "shifted"))
         meta = {"key": key, "provider": provider_name, "duration": round(res.duration, 3),
                 "words": [list(w) for w in res.words], "characters": res.characters, "text": s.voiceover}
         meta_path(project, s.id).write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")

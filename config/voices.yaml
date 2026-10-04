@@ -11,6 +11,9 @@ presets:
     role: null
     speed: 1.1
     pitch_shift: 0
+    # Локальная обработка после озвучки (бесплатно): pitch — во сколько раз выше тон (1.0 — без изменений),
+    # formant: shifted — мультяшный/детский тембр, preserved — тот же голос, просто выше
+    effect: {pitch: 1.0, formant: shifted}
   calm:
     provider: yandex
     voice: filipp

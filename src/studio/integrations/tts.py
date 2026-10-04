@@ -33,6 +33,25 @@ def to_wav(src: Path, dest: Path, rate: int = 48000) -> Path:
     return dest
 
 
+def apply_voice_effect(path: Path, pitch: float, formant: str = "shifted") -> Path:
+    """Локальная обработка голоса: выше тон без изменения темпа (тайминги субтитров не сдвигаются).
+
+    formant=shifted — мультяшный/детский тембр; preserved — тот же голос, просто выше.
+    Нужен фильтр rubberband (есть в полных сборках FFmpeg); без него — простой сдвиг через asetrate.
+    """
+    if not pitch or abs(pitch - 1.0) < 1e-3:
+        return path
+    tmp = path.with_suffix(".fx.wav")
+    if ffmpeg.has_filter("rubberband"):
+        af = f"rubberband=pitch={pitch}:formant={formant}:pitchq=quality"
+    else:
+        af = f"asetrate=48000*{pitch},aresample=48000,atempo={1 / pitch:.5f}"
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(path), "-af", af,
+                    "-ar", "48000", "-ac", "1", str(tmp)], check=True)
+    tmp.replace(path)
+    return path
+
+
 def words_from_alignment(alignment: dict) -> list[tuple[str, float, float]]:
     chars = alignment.get("characters") or []
     starts = alignment.get("character_start_times_seconds") or []
