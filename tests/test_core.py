@@ -336,3 +336,14 @@ def test_reference_status_overlay(settings):
     import pytest as _p
     with _p.raises(Exception):
         lib.set_status("no_such_ref", "approved")
+
+
+def test_redact_boxes_hide_content():
+    from PIL import Image, ImageDraw
+    from studio.editing.local_scenes import redact_boxes
+    img = Image.new("RGB", (400, 200), "white")
+    ImageDraw.Draw(img).text((20, 20), "CLIENT-SECRET-DOMAIN.RU", fill="black")
+    out = redact_boxes(img, [[0, 0, 400, 100]])
+    region = out.crop((0, 0, 400, 100))
+    assert region.getextrema() != img.crop((0, 0, 400, 100)).getextrema() or len(set(region.getdata())) < 50
+    assert out.crop((0, 100, 400, 200)).tobytes() == img.crop((0, 100, 400, 200)).tobytes()

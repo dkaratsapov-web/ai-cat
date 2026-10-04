@@ -278,8 +278,24 @@ def kenburns_frames(img: Image.Image, scene: Scene, settings: Settings, *, water
     return frame
 
 
+def redact_boxes(img: Image.Image, boxes: list) -> Image.Image:
+    """Обезличивание: сильное размытие прямоугольников [x, y, w, h] (в пикселях исходного скриншота)."""
+    if not boxes:
+        return img
+    out = img.copy()
+    for b in boxes:
+        x, y, bw, bh = [int(v) for v in b]
+        region = out.crop((x, y, x + bw, y + bh))
+        # пикселизация + размытие — текст не восстанавливается
+        small = region.resize((max(1, bw // 16), max(1, bh // 16)), Image.BILINEAR)
+        region = small.resize((bw, bh), Image.NEAREST).filter(ImageFilter.GaussianBlur(6))
+        out.paste(region, (x, y))
+    return out
+
+
 def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Frame:
-    """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...'}], caption}
+    """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...'}], caption,
+               redact: [[x,y,w,h], ...]}  — redact размывает конфиденциальные области
 
     Скриншот вписывается по ширине на размытом фоне, медленно приближается,
     поверх появляются рамки-акценты (координаты — в пикселях исходного скриншота).
@@ -288,6 +304,7 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
     sa = settings.get("safe_area")
     cfg = scene.local
     accent = hex_rgb(settings.get("branding.accent_color"))
+    img = redact_boxes(img.convert("RGB"), cfg.get("redact", []))
     blur = cover(img.convert("RGB"), w, h).filter(ImageFilter.GaussianBlur(40))
     blur = Image.blend(blur, Image.new("RGB", (w, h), (0, 0, 0)), 0.45)
     inner_w = w - 2 * 50
