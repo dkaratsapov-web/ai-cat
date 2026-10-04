@@ -19,6 +19,18 @@ video:
   transition_duration: 0.25
   # Громкость итогового ролика (EBU R128); для соцсетей обычно -14 LUFS
   target_lufs: -14
+  # «Живой слой» поверх сцен с котом (бесплатно, локально): наезд камеры, мерцание света, огоньки, пылинки, зерно.
+  # Отключить для сцены: local: {ambient: false}. Тонкая настройка: local: {ambient: {zoom: 0.08}}
+  ambient:
+    enabled: true
+    apply_to: [talking, character_motion, ai_scene]
+    zoom: 0.05
+    drift: 0.012
+    flicker: 0.035
+    bokeh: 16
+    dust: 28
+    grain: 0.035
+    vignette: 0.28
 
 # Безопасные зоны 9:16: интерфейс Reels/Shorts/Клипов перекрывает верх и низ.
 safe_area:

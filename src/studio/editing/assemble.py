@@ -15,6 +15,7 @@ from ..models import Scene, Script
 from ..project import Project
 from . import ffmpeg
 from .fonts import ass_font_name
+from .ambient import ambient_config, apply_ambient
 from .local_scenes import render_local_scene
 from .subtitles import Cue, scene_cues, write_ass, write_srt
 
@@ -81,6 +82,11 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
     extend = sc.local.get("extend") or ("freeze" if sc.type == "talking" else "pingpong")
     if extend == "pingpong" and ffmpeg.duration(src) < length - 0.05:
         src = pingpong(src, project.dir("work") / f"{sc.id}.pingpong.mp4", project.settings)
+    amb = ambient_config(project.settings, sc.local)
+    if amb.get("enabled") and sc.type in amb.get("apply_to", []):
+        # «Живой слой»: камера, свет, огоньки, пылинки — поверх AI-клипа (бесплатно)
+        base = normalize_clip(src, out.with_name(f"{sc.id}.base.mp4"), length, project.settings)
+        return apply_ambient(base, out, length, project.settings, amb, seed=sc.id)
     return normalize_clip(src, out, length, project.settings)
 
 
