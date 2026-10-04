@@ -322,3 +322,17 @@ def test_voice_samples_command(settings, tmp_path, monkeypatch):
                      "jane_p150_s1.1_cat1.3.wav"]
     assert len(calls) == 3  # варианты тона делаются локально, без новых платных запросов
     assert all("x-folder-id" not in h for _, h in calls)  # с API-ключом folder id не отправляется
+
+
+def test_reference_status_overlay(settings):
+    from studio.character.library import CharacterLibrary
+    from studio import cli
+    lib = CharacterLibrary(settings)
+    yaml_before = lib.path.read_text(encoding="utf-8")
+    lib.set_status("office_hoodie_laptop", "approved")
+    assert lib.get("office_hoodie_laptop")["status"] == "approved"
+    assert lib.path.read_text(encoding="utf-8") == yaml_before  # отслеживаемый YAML не меняется
+    lib.set_status("office_hoodie_laptop", "pending")
+    import pytest as _p
+    with _p.raises(Exception):
+        lib.set_status("no_such_ref", "approved")

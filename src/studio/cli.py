@@ -38,15 +38,23 @@ def cmd_character(a, s):
     lib = CharacterLibrary(s)
     if a.action == "list":
         for r in lib.references():
-            print(f"{r['id']:<28} {r['status']:<9} {r.get('angle', ''):<20} {r['file']}  {r.get('description', '')}")
+            print(f"{r['id']:<22} {r['status']:<9} {r.get('use', ''):<8} {r.get('description', '')}")
         print("\nУтвердите референс после просмотра: studio character approve <id>")
     elif a.action == "add":
-        r = lib.add(Path(a.path), a.id, kind=a.kind, angle=a.angle or "", description=a.description or "",
+        if not a.ids or not a.path:
+            raise CharacterError("Использование: studio character add <id> --path <файл>")
+        r = lib.add(Path(a.path), a.ids[0], kind=a.kind, angle=a.angle or "", description=a.description or "",
                     prompt=a.prompt, model=a.model)
         print(f"Добавлен {r['id']} (status: pending). Проверьте изображение и утвердите: studio character approve {r['id']}")
     elif a.action in ("approve", "reject"):
-        r = lib.set_status(a.id, "approved" if a.action == "approve" else "rejected", a.note or "")
-        print(f"{r['id']}: {r['status']}")
+        ids = list(a.ids or [])
+        if a.all_pending:
+            ids += [r["id"] for r in lib.references("pending") if r["id"] not in ids]
+        if not ids:
+            raise CharacterError("Укажите id референсов (через пробел) или --all-pending")
+        for rid in ids:
+            r = lib.set_status(rid, "approved" if a.action == "approve" else "rejected", a.note or "")
+            print(f"{r['id']}: {r['status']}")
     elif a.action == "prompt":
         print(lib.build_prompt(a.text or "<описание сцены>"))
         print("\nNegative:", lib.negative())
@@ -416,7 +424,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     c = sub.add_parser("character", help="библиотека персонажа")
     c.add_argument("action", choices=["list", "add", "approve", "reject", "prompt"])
-    c.add_argument("id", nargs="?")
+    c.add_argument("ids", nargs="*", help="id референса (для approve/reject можно несколько через пробел)")
+    c.add_argument("--all-pending", action="store_true", help="(approve/reject) все ожидающие утверждения")
     c.add_argument("--path")
     c.add_argument("--kind", default="reference", choices=["original", "portrait", "reference"])
     c.add_argument("--angle")

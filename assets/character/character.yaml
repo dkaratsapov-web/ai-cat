@@ -30,6 +30,285 @@ references:
     model: null
     params: {}
     note: Изображение предоставлено владельцем; исходный промпт неизвестен
+- id: shock_monitor
+  file: references/shock_monitor.jpg
+  source_file: references/shock_monitor.jpg
+  kind: reference
+  angle: near_monitor
+  description: Шок от падения графика на мониторе (лапы у мордочки)
+  status: pending
+  sha256: 98cca44a2bf1c0a7
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: на мониторе условные цифры −48% — не для кейсов
+- id: phone_call
+  file: references/phone_call.jpg
+  source_file: references/phone_call.jpg
+  kind: reference
+  angle: office_chair
+  description: 'Деловой звонок: телефон у уха, жестикулирует лапой'
+  status: pending
+  sha256: 1c8d0a2959ec829b
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+- id: closeup_front
+  file: references/closeup_front.jpg
+  source_file: references/closeup_front.jpg
+  kind: reference
+  angle: closeup
+  description: Крупный план за ноутбуком, взгляд в камеру
+  status: pending
+  sha256: 2cf73aad10d10ee8
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+  note: лучший кадр для говорящих сцен
+- id: desk_front
+  file: references/desk_front.jpg
+  source_file: references/desk_front.jpg
+  kind: reference
+  angle: front_laptop
+  description: За ноутбуком, вид спереди, вертикальный кадр
+  status: pending
+  sha256: eeb473e291b66291
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+- id: pointing_chart
+  file: references/pointing_chart.jpg
+  source_file: references/pointing_chart.jpg
+  kind: reference
+  angle: near_monitor
+  description: Указывает лапой на график роста
+  status: pending
+  sha256: bdf945e2e0d8785e
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+- id: chair_boss
+  file: references/chair_boss.jpg
+  source_file: references/chair_boss.jpg
+  kind: reference
+  angle: office_chair
+  description: Развалился в офисном кресле «как босс»
+  status: pending
+  sha256: 0fcde7d8034b9ca6
+  added_at: '2026-10-04T18:11:37+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+- id: desk_three_quarter
+  file: references/desk_three_quarter.jpg
+  source_file: references/desk_three_quarter.jpg
+  kind: reference
+  angle: office_three_quarter
+  description: За столом, ракурс под углом
+  status: pending
+  sha256: f6cc9c246403cf57
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+- id: facepalm
+  file: references/facepalm.jpg
+  source_file: references/facepalm.jpg
+  kind: reference
+  angle: facepalm
+  description: 'Facepalm: лапа на мордочке'
+  status: pending
+  sha256: 1a5143a50cdc16ea
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: рот закрыт — только движение
+- id: pointing_viewer
+  file: references/pointing_viewer.jpg
+  source_file: references/pointing_viewer.jpg
+  kind: reference
+  angle: pointing_viewer
+  description: Указывает лапой на зрителя — для призыва к действию
+  status: pending
+  sha256: c1128dfb4607a29d
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+  note: уже 9:16
+- id: coffee_guru
+  file: references/coffee_guru.jpg
+  source_file: references/coffee_guru.jpg
+  kind: reference
+  angle: coffee
+  description: Держит стаканчик кофе, взгляд в камеру
+  status: pending
+  sha256: 86b2a0edf0ff53a0
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: кружка у мордочки — лучше без речи
+- id: detective_magnifier
+  file: references/detective_magnifier.jpg
+  source_file: references/detective_magnifier.jpg
+  kind: reference
+  angle: magnifier
+  description: 'Детектив с лупой: аудит сайта'
+  status: pending
+  sha256: 5dc3e2706e66c27d
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: лупа закрывает глаз — только движение
+- id: typing_evening
+  file: references/typing_evening.jpg
+  source_file: references/typing_evening.jpg
+  kind: reference
+  angle: typing
+  description: Печатает на ноутбуке вечером, пар от кофе
+  status: pending
+  sha256: 9273d64117a15f9b
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+- id: presenter_funnel
+  file: references/presenter_funnel.jpg
+  source_file: references/presenter_funnel.jpg
+  kind: reference
+  angle: presenter
+  description: Стоит у флипчарта с воронкой продаж, рот приоткрыт
+  status: pending
+  sha256: 9a30a4eb46822b5a
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: talking
+  focus:
+  - 0.5
+  - 0.45
+  note: полный рост
+- id: walking_office
+  file: references/walking_office.jpg
+  source_file: references/walking_office.jpg
+  kind: reference
+  angle: walking
+  description: Идёт по офису к камере
+  status: pending
+  sha256: 3fff698ee888d713
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: исходник квадратный — обрезается до 9:16 по центру
+- id: triumph_confetti
+  file: references/triumph_confetti.jpg
+  source_file: references/triumph_confetti.jpg
+  kind: reference
+  angle: celebrate
+  description: 'Триумф: лапы вверх, конфетти, график растёт'
+  status: pending
+  sha256: 0273f21572391887
+  added_at: '2026-10-04T18:11:38+00:00'
+  generation:
+    prompt: 'по ТЗ из чата: ракурсы 1–15, от исходного фото кота'
+    model: ChatGPT (image)
+    params: {}
+    source_name: null
+  use: motion
+  focus:
+  - 0.5
+  - 0.45
+  note: на мониторе условные цифры +287% — не для кейсов
 planned_angles:
 - angle: front_laptop
   description: Кот за ноутбуком, вид спереди

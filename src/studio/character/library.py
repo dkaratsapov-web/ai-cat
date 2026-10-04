@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import shutil
 from dataclasses import dataclass
@@ -31,12 +32,32 @@ class CharacterLibrary:
     def path(self) -> Path:
         return self.dir / "character.yaml"
 
+    @property
+    def status_path(self) -> Path:
+        """Ваши утверждения хранятся локально (data/ не в Git) — обновления проекта не конфликтуют с ними."""
+        return self.settings.data_dir / "reference_status.json"
+
+    def _statuses(self) -> dict[str, dict]:
+        if not self.status_path.exists():
+            return {}
+        return json.loads(self.status_path.read_text(encoding="utf-8"))
+
     def data(self) -> dict[str, Any]:
         if not self.path.exists():
             raise CharacterError(f"Нет {self.path}")
-        return yaml.safe_load(self.path.read_text(encoding="utf-8")) or {}
+        d = yaml.safe_load(self.path.read_text(encoding="utf-8")) or {}
+        overlay = self._statuses()
+        for r in d.get("references", []) or []:
+            r.update(overlay.get(r["id"], {}))
+        return d
 
     def save(self, data: dict[str, Any]) -> None:
+        overlay = self._statuses()
+        for r in data.get("references", []) or []:
+            if r["id"] in overlay:  # статусы из локального файла в YAML не переносим
+                r["status"] = "pending"
+                r.pop("reviewed_at", None)
+                r.pop("review_note", None)
         self.path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=110), encoding="utf-8")
 
     # ---------- референсы ----------
@@ -84,16 +105,14 @@ class CharacterLibrary:
     def set_status(self, ref_id: str, status: str, note: str = "") -> dict:
         if status not in ("approved", "rejected", "pending"):
             raise CharacterError("Статус: approved | rejected | pending")
-        data = self.data()
-        for r in data.get("references", []):
-            if r["id"] == ref_id:
-                r["status"] = status
-                r["reviewed_at"] = now_iso()
-                if note:
-                    r["review_note"] = note
-                self.save(data)
-                return r
-        raise CharacterError(f"Референс '{ref_id}' не найден")
+        self.get(ref_id)  # проверка существования
+        overlay = self._statuses()
+        entry = {"status": status, "reviewed_at": now_iso()}
+        if note:
+            entry["review_note"] = note
+        overlay[ref_id] = entry
+        self.status_path.write_text(json.dumps(overlay, ensure_ascii=False, indent=1), encoding="utf-8")
+        return self.get(ref_id)
 
     def resolve(self, ref_id: str | None) -> tuple[dict, Path]:
         """Утверждённый референс по id; без id — первый утверждённый."""
