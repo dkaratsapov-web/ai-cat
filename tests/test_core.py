@@ -347,3 +347,47 @@ def test_redact_boxes_hide_content():
     region = out.crop((0, 0, 400, 100))
     assert region.getextrema() != img.crop((0, 0, 400, 100)).getextrema() or len(set(region.getdata())) < 50
     assert out.crop((0, 100, 400, 200)).tobytes() == img.crop((0, 100, 400, 200)).tobytes()
+
+
+def test_kling_motion_lipsync_chain(settings, tmp_path, monkeypatch):
+    import subprocess
+    from studio.integrations import kling as kmod
+
+    audio = tmp_path / "s01.wav"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "sine=duration=3",
+                    "-ar", "48000", "-ac", "1", str(audio)], check=True)
+    calls = []
+
+    def fake_http(method, url, headers, json_body=None, params=None, timeout=60, retries=4, safe_to_retry=True):
+        calls.append((method, url.split("klingai.com")[-1], params, json_body))
+        if url.endswith("/tasks"):
+            return {"code": 0, "data": [{"id": "i2v1", "status": "succeeded",
+                                         "outputs": [{"type": "video", "id": "vid42", "url": "http://x/a.mp4"}]}]}
+        if url.endswith("/identify-face"):
+            assert json_body == {"video_id": "vid42"}
+            return {"code": 0, "data": {"session_id": "sess1", "face_data": [{"face_id": "0"}]}}
+        if url.endswith("/advanced-lip-sync"):
+            fc = json_body["face_choose"][0]
+            assert fc["sound_end_time"] == 3000 and json_body["external_task_id"] == "job1-ls"
+            return {"code": 0, "data": {"task_id": "ls9"}}
+        if "/advanced-lip-sync/ls9" in url:
+            return {"code": 0, "data": {"task_id": "ls9", "task_status": "succeed",
+                                        "task_result": {"videos": [{"url": "http://x/final.mp4"}]}}}
+        raise AssertionError(url)
+
+    monkeypatch.setenv("KLING_API_KEY", "api-key-kling-test")
+    monkeypatch.setattr(kmod, "http_json", fake_http)
+    k = kmod.KlingProvider(settings)
+    ctx = {"audio": str(audio), "audio_seconds": 3.0, "job_id": "job1"}
+    st = k.poll("chain:i2v:i2v1", "motion_lipsync", ctx)
+    assert st.status == "processing" and st.next_task_id == "chain:ls:ls9"
+    st2 = k.poll(st.next_task_id, "motion_lipsync", ctx)
+    assert st2.status == "succeeded" and st2.video_url == "http://x/final.mp4"
+    assert sum(1 for c in calls if c[1].endswith("/advanced-lip-sync")) == 1  # lip-sync отправлен один раз
+
+    pricing = settings.load_yaml("config/pricing.yaml")
+    from studio.integrations.base import VideoRequest
+    req = VideoRequest(kind="motion_lipsync", model="kling-2.6", duration=3.3, resolution="720p",
+                       extra={"audio_seconds": 3.0})
+    unit = pricing["kling"]["unit_usd"]
+    assert k.estimate_usd(req, pricing) == pytest.approx((0.3 * 5 + 0.5 + 0.05) * unit)

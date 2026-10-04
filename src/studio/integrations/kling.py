@@ -17,6 +17,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import os
 import subprocess
 import tempfile
@@ -86,7 +87,7 @@ def to_mp3(audio: Path, min_seconds: float = 2.0) -> Path:
 
 class KlingProvider(VideoProvider):
     name = "kling"
-    kinds = ("image2video", "avatar")
+    kinds = ("image2video", "avatar", "motion_lipsync")
 
     def __init__(self, settings=None):
         self.settings = settings
@@ -137,6 +138,7 @@ class KlingProvider(VideoProvider):
 
     # ------------------------------------------------------------ pricing
     def billed_duration(self, req: VideoRequest) -> float:
+        """Для motion_lipsync — длительность анимации (5/10 с), lip-sync считается отдельно в estimate_usd."""
         if req.kind == "avatar":
             return max(2.0, float(req.duration))
         allowed = MODEL_DURATIONS.get(req.model)
@@ -152,6 +154,14 @@ class KlingProvider(VideoProvider):
         unit = float(p.get("unit_usd", 0.14))
         models = p.get("models", {})
         secs = self.billed_duration(req)
+        if req.kind == "motion_lipsync":
+            base = models.get(req.model, {}).get("per_second", {}).get(req.resolution)
+            if base is None:
+                raise ProviderError(f"Нет тарифа для {req.model}/{req.resolution} в config/pricing.yaml")
+            audio_s = float(req.extra.get("audio_seconds") or req.duration)
+            ls_units = math.ceil(max(audio_s, 2.0) / 5) * models.get("lip-sync", {}).get("per_5_seconds", 0.5)
+            face_units = models.get("face-recognition", {}).get("per_call", 0.05)
+            return round((base * secs + ls_units + face_units) * unit, 4)
         if req.kind == "avatar":
             rate = models.get("avatar", {}).get("per_second", {}).get(req.mode)
         else:
@@ -167,6 +177,9 @@ class KlingProvider(VideoProvider):
             return self._submit_i2v(req)
         if req.kind == "avatar":
             return self._submit_avatar(req)
+        if req.kind == "motion_lipsync":
+            # Шаг 1: полноценная анимация по кадру. Шаги 2–3 (поиск морды, lip-sync) — в poll().
+            return f"chain:i2v:{self._submit_i2v(req)}"
         raise ProviderError(f"Kling: тип задачи {req.kind} не поддерживается адаптером")
 
     def _submit_i2v(self, req: VideoRequest) -> str:
@@ -221,7 +234,9 @@ class KlingProvider(VideoProvider):
             raise ProviderError(f"Kling не вернул task_id: {str(data)[:300]}")
         return str(task_id)
 
-    def poll(self, task_id: str, kind: str) -> TaskState:
+    def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
+        if task_id.startswith("chain:"):
+            return self._poll_chain(task_id, context or {})
         if kind == "avatar":
             data = self._check(http_json("GET", f"{self.base}/v1/videos/avatar/image2video/{task_id}",
                                          headers=self._headers(), timeout=self.timeout))
@@ -233,7 +248,66 @@ class KlingProvider(VideoProvider):
             raise ProviderError(f"Kling: задача {task_id} не найдена")
         return self._parse_new(items[0])
 
+    # ------------------------------------------------------------ анимация + lip-sync
+    def _poll_chain(self, task_id: str, ctx: dict) -> TaskState:
+        """chain:i2v:<id> → (готово) identify-face + advanced-lip-sync → chain:ls:<id> → (готово) результат."""
+        _, stage, real_id = task_id.split(":", 2)
+        if stage == "ls":
+            data = self._check(http_json("GET", f"{self.base}/v1/videos/advanced-lip-sync/{real_id}",
+                                         headers=self._headers(), timeout=self.timeout))
+            st = self._parse_legacy(data.get("data") or {})
+            st.task_id = task_id
+            return st
+        st = self.poll(real_id, "image2video")
+        if st.status != "succeeded":
+            st.task_id = task_id
+            return st
+        video_id = next((o.get("id") for o in st.raw.get("outputs") or [] if o.get("type") == "video"), None)
+        if not video_id:
+            return TaskState(task_id=task_id, status="failed", message="Kling не вернул id анимации для lip-sync")
+        face = self._check(http_json("POST", f"{self.base}/v1/videos/identify-face", headers=self._headers(),
+                                     json_body={"video_id": str(video_id)}, timeout=self.timeout,
+                                     safe_to_retry=False)).get("data") or {}
+        faces = face.get("face_data") or []
+        if not faces or not face.get("session_id"):
+            return TaskState(task_id=task_id, status="failed", video_url=st.video_url,
+                             message="Lip Sync не нашёл морду кота в анимации — для этой сцены используйте "
+                                     "kling.talking_mode: avatar")
+        audio = Path(ctx.get("audio") or "")
+        if not audio.exists():
+            return TaskState(task_id=task_id, status="failed", message=f"нет аудио для lip-sync: {audio}")
+        audio_ms = int(float(ctx.get("audio_seconds") or 0) * 1000) or 2000
+        mp3 = to_mp3(audio)
+        try:
+            sound = b64_file(mp3, AVATAR_MAX_AUDIO_BYTES)
+        finally:
+            mp3.unlink(missing_ok=True)
+        body = {
+            "session_id": face["session_id"],
+            "face_choose": [{
+                "face_id": str(faces[0].get("face_id")), "sound_file": sound,
+                "sound_start_time": 0, "sound_end_time": max(audio_ms, 2000), "sound_insert_time": 0,
+                "sound_volume": 1, "original_audio_volume": 0,
+            }],
+            "external_task_id": f"{ctx.get('job_id', '')}-ls",
+            "watermark_info": {"enabled": False},
+        }
+        data = self._check(http_json("POST", f"{self.base}/v1/videos/advanced-lip-sync", headers=self._headers(),
+                                     json_body=body, timeout=self.timeout, safe_to_retry=False))
+        ls_id = (data.get("data") or {}).get("task_id")
+        if not ls_id:
+            return TaskState(task_id=task_id, status="failed", message=f"lip-sync не создан: {str(data)[:200]}")
+        nxt = f"chain:ls:{ls_id}"
+        return TaskState(task_id=nxt, status="processing", next_task_id=nxt)
+
     def find_by_external_id(self, external_id: str, kind: str) -> TaskState | None:
+        if kind == "motion_lipsync":
+            found = self.find_by_external_id(external_id, "image2video")
+            if found:
+                found.task_id = f"chain:i2v:{found.task_id}"
+                if found.status == "succeeded":
+                    found.status = "processing"  # дальше нужен lip-sync
+            return found
         try:
             if kind == "avatar":
                 data = http_json("GET", f"{self.base}/v1/videos/avatar/image2video/{external_id}",

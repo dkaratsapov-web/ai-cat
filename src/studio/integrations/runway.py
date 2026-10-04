@@ -69,7 +69,7 @@ class RunwayProvider(VideoProvider):
             raise ProviderError(f"Runway не вернул id: {str(data)[:300]}")
         return str(data["id"])
 
-    def poll(self, task_id: str, kind: str) -> TaskState:
+    def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
         d = http_json("GET", f"{BASE}/v1/tasks/{task_id}", headers=self._headers())
         status = STATUS_MAP.get(d.get("status", ""), "processing")
         out = d.get("output") or []

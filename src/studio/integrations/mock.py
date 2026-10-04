@@ -20,7 +20,7 @@ from .base import TaskState, VideoProvider, VideoRequest
 class MockProvider(VideoProvider):
     name = "mock"
     paid = False
-    kinds = ("image2video", "avatar")
+    kinds = ("image2video", "avatar", "motion_lipsync")
 
     def __init__(self, settings=None):
         self.settings = settings
@@ -46,7 +46,7 @@ class MockProvider(VideoProvider):
         (self.dir / f"{task_id}.json").write_text(json.dumps({"external_id": req.external_id, "kind": req.kind}), encoding="utf-8")
         return task_id
 
-    def poll(self, task_id: str, kind: str) -> TaskState:
+    def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
         out = self.dir / f"{task_id}.mp4"
         if out.exists():
             return TaskState(task_id=task_id, status="succeeded", video_url=out.as_uri())  # file:///… — переносимо между ОС

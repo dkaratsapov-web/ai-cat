@@ -94,7 +94,16 @@ def plan_scene(project: Project, scene: Scene, lib: CharacterLibrary, *, need_au
         gen = s.get("override_generator")
     provider = gen
     if talking:
-        if gen in ("kling", "mock"):
+        talking_mode = scene.local.get("talking_mode") or s.get("kling.talking_mode", "avatar")
+        if gen in ("kling", "mock") and talking_mode == "motion_lipsync":
+            # Живая анимация всего кадра (Kling 2.6) + синхронизация губ с озвучкой (Kling Lip Sync)
+            req = VideoRequest(kind="motion_lipsync",
+                               model=scene.local.get("model") or s.get("kling.i2v_model", "kling-2.6"),
+                               prompt=prompt, negative_prompt=negative, image=image, audio=audio,
+                               duration=round(duration, 2),
+                               resolution=scene.local.get("resolution") or s.get("kling.resolution", "720p"),
+                               extra={"audio_seconds": round(voice_dur or scene.duration, 2)})
+        elif gen in ("kling", "mock"):
             req = VideoRequest(kind="avatar", model="avatar", prompt=prompt, image=image, audio=audio,
                                duration=round(duration, 2), mode=scene.local.get("mode") or s.get("kling.avatar_mode", "std"))
         elif gen == "hedra":
@@ -329,11 +338,14 @@ class Runner:
             self.db.update_job(job["id"], external_task_id=found.task_id, status="processing")
             job = self.db.get_job(job["id"])  # type: ignore[assignment]
         try:
-            st = prov.poll(job["external_task_id"], job["kind"])
+            ctx = {**json.loads(job.get("params_json") or "{}"), "job_id": job["id"]}
+            st = prov.poll(job["external_task_id"], job["kind"], ctx)
         except ProviderError as e:
             print(f"  {job['scene_id']}: ошибка опроса ({redact(str(e))}) — попробуем позже")
             return job
         fields: dict = {"status": st.status if st.status in ("succeeded", "failed") else "processing"}
+        if st.next_task_id:  # следующий шаг цепочки (lip-sync) — сохраняем сразу, чтобы не отправить повторно
+            fields["external_task_id"] = st.next_task_id
         if st.video_url:
             fields["result_url"] = st.video_url
         if st.message and st.status == "failed":

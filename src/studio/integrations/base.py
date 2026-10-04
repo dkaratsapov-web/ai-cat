@@ -78,6 +78,8 @@ class TaskState:
     message: str = ""
     billed_units: float | None = None
     raw: dict[str, Any] = field(default_factory=dict)
+    # Многошаговые задачи (анимация → lip-sync): новый id следующего шага, который нужно сохранить
+    next_task_id: str | None = None
 
     @property
     def done(self) -> bool:
@@ -107,8 +109,8 @@ class VideoProvider(ABC):
         """Создаёт задачу, возвращает task_id провайдера."""
 
     @abstractmethod
-    def poll(self, task_id: str, kind: str) -> TaskState:
-        ...
+    def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
+        """context — сохранённые параметры задачи (например, путь к аудио) и наш job_id."""
 
     def find_by_external_id(self, external_id: str, kind: str) -> TaskState | None:
         """Поиск задачи по нашему идентификатору (для восстановления после сбоя)."""

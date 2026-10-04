@@ -90,7 +90,7 @@ class HedraProvider(VideoProvider):
             raise ProviderError(f"Hedra не вернул job_id: {str(data)[:300]}")
         return str(job_id)
 
-    def poll(self, task_id: str, kind: str) -> TaskState:
+    def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
         st = http_json("GET", f"{BASE}/jobs/{task_id}/status", headers=self._headers())
         status = STATUS_MAP.get(st.get("status", ""), "processing")
         url = None
