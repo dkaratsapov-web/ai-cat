@@ -106,7 +106,7 @@ def run_qa(project: Project) -> Report:
 
     # Озвучка внутри сцен совпадает с длительностью сцен
     for it in timeline:
-        ap = project.scene_audio(it["scene"])
+        ap = Path(it["audio"]) if it.get("audio") else project.scene_audio(it["scene"])
         if ap.exists():
             adur = ffmpeg.duration(ap)
             if adur > it["duration"] + 0.05:

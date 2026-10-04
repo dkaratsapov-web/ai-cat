@@ -33,6 +33,12 @@ def ease_out(x: float) -> float:
     return 1 - (1 - x) ** 3
 
 
+def ease_io(x: float) -> float:
+    """Плавный разгон и торможение (ease-in-out) для камеры и переходов."""
+    x = min(max(x, 0.0), 1.0)
+    return x * x * (3 - 2 * x)
+
+
 def write_frames(out: Path, frame_fn: Frame, duration: float, settings: Settings) -> Path:
     w, h, fps = settings.get("video.width"), settings.get("video.height"), settings.get("video.fps")
     n = max(1, round(duration * fps))
@@ -104,6 +110,88 @@ def rubric_badge(draw: ImageDraw.ImageDraw, settings: Settings, x: int, y: int) 
     draw.text((x + 24, y + 12), text, font=f, fill=(20, 20, 20))
 
 
+TITLE_SIZE = 80      # основной заголовок (ТЗ: 60–80 px)
+NOTE_SIZE = 40       # второстепенная подпись (ТЗ: 38–48 px)
+
+
+def branded_header(img: Image.Image, settings: Settings, title: str, note: str = "", compact: bool = False) -> int:
+    """Единая «шапка» локальных сцен: плашка рубрики, заголовок, жёлтая черта, мелкая подпись.
+
+    Возвращает y, с которого можно рисовать содержимое."""
+    w = img.width
+    sa = settings.get("safe_area")
+    d = ImageDraw.Draw(img)
+    rubric_badge(d, settings, sa["left"], sa["top"])
+    note_f = fonts.font(settings.fonts_dir, NOTE_SIZE, bold=False)
+    text_c = hex_rgb(settings.get("branding.text_color"))
+    accent = hex_rgb(settings.get("branding.accent_color"))
+    muted = hex_rgb(settings.get("branding.muted_color"))
+    max_w = w - 2 * sa["left"]          # справа вверху интерфейс площадки не мешает
+    # Не больше двух строк: при длинном заголовке чуть уменьшаем кегль (80 → 72 → 66)
+    for size in ((72, 66, 60) if compact else (TITLE_SIZE, 72, 66)):
+        title_f = fonts.font(settings.fonts_dir, size)
+        lines = wrap(d, title, title_f, max_w)
+        if len(lines) <= 2:
+            break
+    y = sa["top"] + (100 if compact else 130)
+    for line in lines:
+        d.text((sa["left"], y), line, font=title_f, fill=text_c)
+        y += int(size * 1.15)
+    y += 16 if compact else 24
+    d.rectangle((sa["left"], y, sa["left"] + 160, y + 10), fill=accent)
+    y += 10
+    if note:
+        y += 16 if compact else 22
+        d.text((sa["left"], y), note, font=note_f, fill=muted)
+        y += int(NOTE_SIZE * 1.3)
+    return y + (24 if compact else 40)
+
+
+def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float) -> Image.Image:
+    """Надписи поверх видео-сцен (хук, призыв): плашка + текст, плавное появление снизу вверх за 0,4 с.
+
+    overlay: {text, at, size, y, accent: "слово"} — слово из accent выделяется цветом бренда."""
+    if not overlays:
+        return img
+    w = img.width
+    sa = settings.get("safe_area")
+    accent = hex_rgb(settings.get("branding.accent_color"))
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    for ov in overlays:
+        at = float(ov.get("at", 0.0))
+        until = ov.get("until")
+        if t < at or (until is not None and t > float(until) + 0.3):
+            continue
+        p = ease_out((t - at) / float(ov.get("fade", 0.4)))
+        if until is not None and t > float(until):
+            p = min(p, 1 - ease_io((t - float(until)) / 0.3))
+        size = int(ov.get("size", TITLE_SIZE))
+        f = fonts.font(settings.fonts_dir, size)
+        max_w = w - sa["left"] - sa["right"] - 56
+        lines = wrap(d, ov["text"], f, max_w)
+        lh = int(size * 1.18)
+        box_w = max(d.textlength(line, font=f) for line in lines) + 56
+        box_h = lh * len(lines) + 36
+        x0 = (w - box_w) / 2
+        y0 = float(ov.get("y", sa["top"] + 40)) + (1 - p) * 30
+        a = int(255 * p)
+        d.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=28, fill=(14, 16, 22, int(205 * p)))
+        hl = str(ov.get("accent", "")).lower()
+        yy = y0 + 16
+        for line in lines:
+            xx = (w - d.textlength(line, font=f)) / 2
+            for word in line.split(" "):
+                plain = word.strip("«»\"'.,!?:;").lower()
+                color = accent if hl and plain and plain in hl.split() else (255, 255, 255)
+                d.text((xx, yy), word, font=f, fill=(*color, a))
+                xx += d.textlength(word + " ", font=f)
+            yy += lh
+    base = img.convert("RGBA")
+    base.alpha_composite(layer)
+    return base.convert("RGB")
+
+
 def resolve_image(project_path: Path, settings: Settings, rel: str) -> Path:
     """Картинка сцены: только внутри imports/ и images/ проекта или assets/ — и только настоящее изображение.
 
@@ -129,56 +217,56 @@ def resolve_image(project_path: Path, settings: Settings, rel: str) -> Path:
 # ---------------------------------------------------------------- kinds
 
 def card_frames(scene: Scene, settings: Settings) -> Frame:
-    """local: {kind: card, title: str, bullets: [..], footnote: str}"""
+    """local: {kind: card, title, bullets: [..], footnote, bullet_at: [сек..], reveal: stack|single}
+
+    reveal=single — на экране один тезис: следующий плавно сменяет предыдущий (время — bullet_at)."""
     w, h = settings.get("video.width"), settings.get("video.height")
     sa = settings.get("safe_area")
     cfg = scene.local
     bg = background(settings, w, h)
+    y = branded_header(bg, settings, cfg.get("title", ""), cfg.get("note", ""))
     d = ImageDraw.Draw(bg)
-    rubric_badge(d, settings, sa["left"], sa["top"])
-    title_f = fonts.font(settings.fonts_dir, int(cfg.get("title_size", 92)))
-    bullet_f = fonts.font(settings.fonts_dir, int(cfg.get("bullet_size", 62)))
-    note_f = fonts.font(settings.fonts_dir, 38, bold=False)
+    bullet_f = fonts.font(settings.fonts_dir, int(cfg.get("bullet_size", 60)))
+    note_f = fonts.font(settings.fonts_dir, NOTE_SIZE, bold=False)
     text_c = hex_rgb(settings.get("branding.text_color"))
     accent = hex_rgb(settings.get("branding.accent_color"))
     muted = hex_rgb(settings.get("branding.muted_color"))
     max_w = w - sa["left"] - sa["right"]
-    y = sa["top"] + 140
-    for line in wrap(d, cfg.get("title", ""), title_f, max_w):
-        d.text((sa["left"], y), line, font=title_f, fill=text_c)
-        y += int(title_f.size * 1.15)
-    y += 30
-    d.rectangle((sa["left"], y, sa["left"] + 160, y + 10), fill=accent)
-    y += 70
+    y += 20
     base = bg.copy()
     bullets = cfg.get("bullets", []) or []
-    # Позиции пунктов заранее
+    single = cfg.get("reveal") == "single"
     layout = []
     for b in bullets:
         lines = wrap(d, b, bullet_f, max_w - 90)
         layout.append((y, lines))
-        y += int(bullet_f.size * 1.2) * len(lines) + 40
+        if not single:
+            y += int(bullet_f.size * 1.2) * len(lines) + 40
     if cfg.get("footnote"):
         d2 = ImageDraw.Draw(base)
-        fy = h - sa["bottom"] - 60
+        fy = h - sa["bottom"] - 200   # не у нижней границы: там субтитры и интерфейс площадки
         for line in wrap(d2, cfg["footnote"], note_f, max_w):
             d2.text((sa["left"], fy), line, font=note_f, fill=muted)
-            fy += 46
+            fy += 52
     reveal = float(cfg.get("reveal_every", max(0.4, (scene.duration - 0.6) / max(len(bullets), 1))))
+    times = [float(x) for x in cfg.get("bullet_at", [])] or [0.3 + i * reveal for i in range(len(bullets))]
+    times += [times[-1] + reveal * (k + 1) for k in range(len(bullets) - len(times))] if times else []
 
     def frame(t: float) -> Image.Image:
         img = base.copy()
         dd = ImageDraw.Draw(img, "RGBA")
         for i, (by, lines) in enumerate(layout):
-            p = ease_out((t - 0.3 - i * reveal) / 0.35)
+            p = ease_out((t - times[i]) / 0.35)
+            if single and i + 1 < len(times) and t >= times[i + 1]:
+                p = min(p, 1 - ease_io((t - times[i + 1]) / 0.25))   # уходит, когда появляется следующий
             if p <= 0:
                 continue
             a = int(255 * p)
-            dx = int((1 - p) * 60)
-            dd.ellipse((sa["left"] + dx, by + 14, sa["left"] + 44 + dx, by + 58), fill=(*accent, a))
+            dx = int((1 - p) * 40)
+            dd.ellipse((sa["left"] + dx, by + 12, sa["left"] + 40 + dx, by + 52), fill=(*accent, a))
             ly = by
             for line in lines:
-                dd.text((sa["left"] + 80 + dx, ly), line, font=bullet_f, fill=(*text_c, a))
+                dd.text((sa["left"] + 76 + dx, ly), line, font=bullet_f, fill=(*text_c, a))
                 ly += int(bullet_f.size * 1.2)
         return img
 
@@ -303,81 +391,130 @@ def redact_boxes(img: Image.Image, boxes: list) -> Image.Image:
     return out
 
 
-def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Frame:
-    """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...', label_pos: below|above}], caption,
-               redact: [[x,y,w,h], ...], crop: [x,y,w,h]}  — redact размывает конфиденциальное,
-               crop оставляет нужную часть; координаты — пиксели исходника или доли 0–1
+HL_COLORS = {"accent": None, "red": (235, 64, 64)}
 
-    Скриншот вписывается по ширине на размытом фоне, медленно приближается,
-    поверх появляются рамки-акценты (координаты — в пикселях исходного скриншота).
+
+def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Frame:
+    """local: {kind: screenshot, image, caption, note, crop: [x,y,w,h], redact: [[x,y,w,h]],
+               highlights: [{box, at, until, color: accent|red, zoom: 1.3, focus: [x,y,w,h], label, label_pos}]}
+
+    Единый стиль с карточками: фон бренда, плашка рубрики, заголовок (caption) с жёлтой чертой, ниже — интерфейс.
+    Камера плавно (ease-in-out, 0,45 с) приближается к области подсветки: focus — показать область целиком,
+    zoom — приблизить в N раз относительно общего плана. Координаты — пиксели исходника или доли 0–1.
     """
     w, h = settings.get("video.width"), settings.get("video.height")
     sa = settings.get("safe_area")
     cfg = scene.local
     accent = hex_rgb(settings.get("branding.accent_color"))
-    img = redact_boxes(img.convert("RGB"), cfg.get("redact", []))
-    src_w, src_h = img.size
-    # crop: [x, y, w, h] — показать только нужную часть широкого скриншота (координаты исходника)
-    ox = oy = 0
-    if cfg.get("crop"):
-        ox, oy, cw, ch = to_px(cfg["crop"], src_w, src_h)
-        img = img.crop((ox, oy, ox + cw, oy + ch))
-    blur = cover(img.convert("RGB"), w, h).filter(ImageFilter.GaussianBlur(40))
-    blur = Image.blend(blur, Image.new("RGB", (w, h), (0, 0, 0)), 0.45)
-    cap_f = fonts.font(settings.fonts_dir, 60)
+    src = redact_boxes(img.convert("RGB"), cfg.get("redact", []))
+    src_w, src_h = src.size
+    ox, oy, cw, ch = (to_px(cfg["crop"], src_w, src_h) if cfg.get("crop") else [0, 0, src_w, src_h])
+    base = background(settings, w, h)
+    area_top = branded_header(base, settings, cfg.get("caption", ""), cfg.get("note", ""), compact=True)
+    # Низ панели — выше строки субтитров (до двух строк), чтобы текст не наезжал на интерфейс
+    st = settings.get("subtitles") or {}
+    area_bottom = h - int(st.get("margin_v", sa["bottom"])) - int(int(st.get("font_size", 54)) * 2.6) - 20
+    margin = 40
+    ax0, ax1 = margin, w - margin
+    avail_w, avail_h = ax1 - ax0, area_bottom - area_top
     lab_f = fonts.font(settings.fonts_dir, 44)
-    measure = ImageDraw.Draw(Image.new("RGB", (8, 8)))
-    cap_lines = wrap(measure, cfg["caption"], cap_f, w - sa["left"] - sa["right"]) if cfg.get("caption") else []
-    # Область под скриншот: ниже подписи и выше нижней безопасной зоны (с местом под ярлыки рамок)
-    area_top = (sa["top"] - 10 + 70 * len(cap_lines) + 40) if cap_lines else sa["top"]
-    area_bottom = h - sa["bottom"] + 40
-    avail_h = area_bottom - area_top
-    inner_w = w - 2 * 50
-    scale = min(inner_w / img.width, avail_h / img.height)
-    shot = img.convert("RGB").resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
-    sx, sy = (w - shot.width) // 2, area_top + (avail_h - shot.height) // 2
-    base = blur.copy()
-    shadow = Image.new("RGBA", (shot.width + 40, shot.height + 40), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle((20, 20, shot.width + 20, shot.height + 20), radius=24, fill=(0, 0, 0, 160))
-    base.paste(shadow.filter(ImageFilter.GaussianBlur(16)), (sx - 20, sy - 4), shadow.filter(ImageFilter.GaussianBlur(16)))
-    base.paste(shot, (sx, sy))
-    if cap_lines:
-        d = ImageDraw.Draw(base)
-        yy = sa["top"] - 10
-        for line in cap_lines:
-            d.text((sa["left"], yy), line, font=cap_f, fill=(255, 255, 255), stroke_width=4, stroke_fill=(0, 0, 0))
-            yy += 70
-    highlights = cfg.get("highlights", []) or []
-    z1 = float(cfg.get("zoom_to", 1.05))
+
+    def fit(rect, pad: float = 1.0) -> tuple[float, float, float]:
+        """Камера (масштаб, центр x, центр y в пикселях исходника), чтобы rect поместился в область."""
+        rx, ry, rw, rh = rect
+        sc = min(avail_w / rw, avail_h / rh) / pad
+        return sc, rx + rw / 2, ry + rh / 2
+
+    overview = fit((ox, oy, cw, ch))
+    highlights = [dict(hl) for hl in (cfg.get("highlights", []) or [])]
+    keys = [(0.0, overview)]
+    for hl in sorted(highlights, key=lambda x: float(x.get("at", 0.5))):
+        if hl.get("focus") or hl.get("zoom"):
+            bx, by, bw, bh = to_px(hl.get("focus") or hl["box"], src_w, src_h)
+            if hl.get("focus"):
+                cam = fit((bx, by, bw, bh), 1.04)
+                cam = (min(cam[0], overview[0] * float(hl.get("max_zoom", 2.2))), cam[1], cam[2])
+            else:
+                cam = (overview[0] * float(hl["zoom"]), bx + bw / 2, by + bh / 2)
+            keys.append((max(0.0, float(hl.get("at", 0.5)) - 0.15), cam))
+    move = float(cfg.get("camera_move", 0.45))
+    view_cx0, view_cy0 = (ax0 + ax1) / 2, (area_top + area_bottom) / 2
+
+    def camera(t: float) -> tuple[float, float, float]:
+        cur = keys[0][1]
+        for k_at, k_cam in keys[1:]:
+            if t <= k_at:
+                break
+            p = ease_io((t - k_at) / move)
+            cur = (math.exp(math.log(cur[0]) + (math.log(k_cam[0]) - math.log(cur[0])) * p),
+                   cur[1] + (k_cam[1] - cur[1]) * p, cur[2] + (k_cam[2] - cur[2]) * p)
+        return cur
+
+    def clamp_center(sc: float, cx: float, cy: float) -> tuple[float, float]:
+        """Не показывать пустоту за краями кадрированной области, если она больше окна."""
+        half_w, half_h = avail_w / 2 / sc, avail_h / 2 / sc
+        if cw / 2 > half_w:
+            cx = min(max(cx, ox + half_w), ox + cw - half_w)
+        else:
+            cx = ox + cw / 2
+        if ch / 2 > half_h:
+            cy = min(max(cy, oy + half_h), oy + ch - half_h)
+        else:
+            cy = oy + ch / 2
+        return cx, cy
+
     dur = max(scene.duration, 0.1)
+    drift = float(cfg.get("zoom_to", 1.03)) - 1   # лёгкое общее «дыхание» камеры за сцену
 
     def frame(t: float) -> Image.Image:
-        img2 = base.copy()
-        dd = ImageDraw.Draw(img2, "RGBA")
+        sc, cx, cy = camera(t)
+        sc *= 1 + drift * ease_io(t / dur)
+        cx, cy = clamp_center(sc, cx, cy)
+        # видимая часть исходника → панель на экране
+        vx0, vy0 = max(ox, cx - avail_w / 2 / sc), max(oy, cy - avail_h / 2 / sc)
+        vx1, vy1 = min(ox + cw, cx + avail_w / 2 / sc), min(oy + ch, cy + avail_h / 2 / sc)
+        px0, py0 = view_cx0 + (vx0 - cx) * sc, view_cy0 + (vy0 - cy) * sc
+        pw, ph = max(1, round((vx1 - vx0) * sc)), max(1, round((vy1 - vy0) * sc))
+        out = base.copy()
+        sh = Image.new("RGBA", (pw + 60, ph + 60), (0, 0, 0, 0))
+        ImageDraw.Draw(sh).rounded_rectangle((30, 30, pw + 30, ph + 30), radius=22, fill=(0, 0, 0, 150))
+        sh = sh.filter(ImageFilter.GaussianBlur(14))
+        out.paste(sh, (round(px0) - 30, round(py0) - 18), sh)
+        panel = src.resize((pw, ph), Image.BICUBIC, box=(vx0, vy0, vx1, vy1))
+        mask = Image.new("L", (pw, ph), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, pw - 1, ph - 1), radius=22, fill=255)
+        out.paste(panel, (round(px0), round(py0)), mask)
+        hl_layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        dd = ImageDraw.Draw(hl_layer)
         for hl in highlights:
             at = float(hl.get("at", 0.5))
-            if t < at:
+            until = hl.get("until")
+            if t < at or (until is not None and t > float(until) + 0.3):
                 continue
-            bx, by, bbw, bbh = to_px(hl["box"], src_w, src_h)
-            x, y, bw, bh = (bx - ox) * scale, (by - oy) * scale, bbw * scale, bbh * scale
-            pulse = 0.5 + 0.5 * math.sin((t - at) * 6)
-            width = int(6 + 4 * pulse)
-            dd.rounded_rectangle((sx + x - 8, sy + y - 8, sx + x + bw + 8, sy + y + bh + 8), radius=16,
-                                 outline=(*accent, 255), width=width, fill=(*accent, 40))
+            p = ease_out((t - at) / 0.3)
+            if until is not None and t > float(until):
+                p = min(p, 1 - ease_io((t - float(until)) / 0.3))
+            color = HL_COLORS.get(hl.get("color", "accent")) or accent
+            fill_a = 70 if hl.get("color") == "red" else 46
+            bx, by, bw, bh = to_px(hl["box"], src_w, src_h)
+            x0, y0 = view_cx0 + (bx - cx) * sc, view_cy0 + (by - cy) * sc
+            x1, y1 = x0 + bw * sc, y0 + bh * sc
+            dd.rounded_rectangle((x0 - 6, y0 - 6, x1 + 6, y1 + 6), radius=14,
+                                 outline=(*color, int(255 * p)), width=6, fill=(*color, int(fill_a * p)))
             if hl.get("label"):
-                lx, ly = sx + x, sy + y + bh + 20
-                if hl.get("label_pos") == "above":  # подпись над рамкой, если под ней важные строки
-                    ly = sy + y - 20 - 64 - 8
+                lx, ly = x0, (y0 - 20 - 64 - 6) if hl.get("label_pos") == "above" else y1 + 20
                 tw = dd.textlength(hl["label"], font=lab_f)
-                lx = min(lx, w - tw - 60)
-                dd.rounded_rectangle((lx - 16, ly, lx + tw + 16, ly + 64), radius=14, fill=(*accent, 240))
-                dd.text((lx, ly + 8), hl["label"], font=lab_f, fill=(20, 20, 20))
-        p = t / dur
-        z = 1 + (z1 - 1) * (p * p * (3 - 2 * p))
-        if z > 1.001:
-            cw, ch = w / z, h / z
-            img2 = img2.resize((w, h), Image.BICUBIC, box=((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
-        return img2
+                lx = min(max(lx, sa["left"]), w - tw - 60)
+                dd.rounded_rectangle((lx - 16, ly, lx + tw + 16, ly + 64), radius=14, fill=(*color, int(240 * p)))
+                dd.text((lx, ly + 8), hl["label"], font=lab_f, fill=(20, 20, 20, int(255 * p)))
+        # рамки — только в пределах панели (не вылезают на фон)
+        clip = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(clip).rounded_rectangle((px0 - 8, py0 - 8, px0 + pw + 8, py0 + ph + 8), radius=26, fill=255)
+        hl_layer.putalpha(Image.composite(hl_layer.getchannel("A"), Image.new("L", (w, h), 0), clip))
+        out = Image.alpha_composite(out.convert("RGBA"), hl_layer).convert("RGB")
+        # шапка поверх панели (панель при приближении не залезает на заголовок)
+        out.paste(base.crop((0, 0, w, area_top - 10)), (0, 0))
+        return out
 
     return frame
 

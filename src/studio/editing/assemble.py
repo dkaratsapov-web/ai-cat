@@ -4,8 +4,10 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..character.library import CharacterLibrary, CharacterError
@@ -19,7 +21,7 @@ from .ambient import ambient_config, apply_ambient
 from .local_scenes import render_local_scene
 from .subtitles import Cue, scene_cues, write_ass, write_srt
 
-VOICE_TAIL = 0.2   # пауза после фразы внутри сцены, сек
+VOICE_TAIL = 0.2   # пауза после фразы внутри сцены, сек (video.voice_tail в конфиге)
 
 
 class AssemblyError(RuntimeError):
@@ -32,23 +34,158 @@ class TimelineItem:
     start: float
     duration: float
     audio: Path | None
+    meta: dict | None = field(default=None)   # озвучка сцены (после сокращения пауз): duration, words
 
 
 def build_timeline(project: Project, script: Script) -> list[TimelineItem]:
     t = 0.0
     items = []
+    tail = float(project.settings.get("video.voice_tail", VOICE_TAIL))
     for sc in script.scenes:
         meta = scene_voice_meta(project, sc.id) if sc.voiceover.strip() else None
         if sc.voiceover.strip() and not meta:
             raise AssemblyError(f"{sc.id}: нет озвучки. Выполните: studio voice {project.id}")
         if meta and meta.get("text", "").strip() != sc.voiceover.strip():
             raise AssemblyError(f"{sc.id}: озвучка устарела (текст изменён). Выполните: studio voice {project.id}")
-        dur = (meta["duration"] + VOICE_TAIL) if meta else sc.duration
+        audio = project.scene_audio(sc.id) if meta else None
+        if meta and audio:
+            audio, meta = tighten_voice(project, sc, audio, meta)
+        dur = (meta["duration"] + tail) if meta else sc.duration
         dur = max(dur, float(sc.local.get("min_duration", 0)))
-        items.append(TimelineItem(scene=sc, start=round(t, 3), duration=round(dur, 3),
-                                  audio=project.scene_audio(sc.id) if meta else None))
+        items.append(TimelineItem(scene=sc, start=round(t, 3), duration=round(dur, 3), audio=audio, meta=meta))
         t += dur
     return items
+
+
+# ---------------------------------------------------------------- озвучка: лишние паузы
+
+def tighten_voice(project: Project, scene: Scene, audio: Path, meta: dict) -> tuple[Path, dict]:
+    """Убирает тишину в начале/конце фразы и укорачивает длинные паузы внутри — запись та же, темп тот же.
+
+    Говорящие сцены не трогаем: губы аватара синхронизированы с исходным файлом.
+    Время слов пересчитывается, поэтому субтитры и подсветки остаются синхронными."""
+    cfg = {"enabled": True, "noise_db": -42, "min_silence": 0.12, "lead": 0.05, "tail": 0.1, "max_pause": 0.3,
+           **(project.settings.get("video.voice_tighten") or {})}
+    if not cfg["enabled"] or scene.type == "talking" or scene.local.get("tighten") is False:
+        return audio, meta
+    params = json.dumps({k: cfg[k] for k in sorted(cfg)}, sort_keys=True) + str(meta.get("key")) + str(audio.stat().st_size)
+    tag = hashlib.sha256(params.encode()).hexdigest()[:12]
+    work = project.dir("work") / "voice"
+    work.mkdir(parents=True, exist_ok=True)
+    out, out_meta = work / f"{scene.id}.tight.wav", work / f"{scene.id}.tight.json"
+    if out.exists() and out_meta.exists():
+        cached = json.loads(out_meta.read_text(encoding="utf-8"))
+        if cached.get("tag") == tag:
+            return out, cached["meta"]
+    dur = float(meta.get("duration") or ffmpeg.duration(audio))
+    proc = ffmpeg.run(["ffmpeg", "-i", audio, "-af",
+                       f"silencedetect=noise={cfg['noise_db']}dB:d={cfg['min_silence']}", "-f", "null", "-"], quiet=False)
+    starts = [float(x) for x in re.findall(r"silence_start: (-?[\d.]+)", proc.stderr or "")]
+    ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", proc.stderr or "")]
+    cuts: list[tuple[float, float]] = []
+    for i, st in enumerate(starts):
+        st = max(0.0, st)
+        en = ends[i] if i < len(ends) else dur
+        if st <= 0.02:
+            cuts.append((0.0, max(0.0, en - cfg["lead"])))
+        elif en >= dur - 0.02:
+            cuts.append((min(dur, st + cfg["tail"]), dur))
+        elif en - st > cfg["max_pause"]:
+            half = cfg["max_pause"] / 2
+            cuts.append((st + half, en - half))
+    # Защита: никогда не резать внутри слов (тайминги слов от синтеза речи) и не трогать «сплошную тишину»
+    spans = [(float(a) - 0.03, float(b) + 0.03) for _w, a, b in meta.get("words") or []]
+    safe: list[tuple[float, float]] = []
+    for a, b in cuts:
+        pieces = [(a, b)]
+        for sa, sb in spans:
+            nxt = []
+            for pa, pb in pieces:
+                if sb <= pa or sa >= pb:
+                    nxt.append((pa, pb))
+                    continue
+                if sa > pa:
+                    nxt.append((pa, sa))
+                if sb < pb:
+                    nxt.append((sb, pb))
+            pieces = nxt
+        safe += pieces
+    cuts = [(a, b) for a, b in safe if b - a > 0.02]
+    removed = sum(b - a for a, b in cuts)
+    if removed < 0.05 or removed > 0.4 * dur:
+        return audio, meta
+    keep, pos = [], 0.0
+    for a, b in sorted(cuts):
+        if a > pos:
+            keep.append((pos, a))
+        pos = max(pos, b)
+    if pos < dur:
+        keep.append((pos, dur))
+
+    def remap(t: float) -> float:
+        acc = 0.0
+        for a, b in keep:
+            if t <= a:
+                return acc
+            if t <= b:
+                return acc + (t - a)
+            acc += b - a
+        return acc
+
+    sr = project.settings.get("video.audio_sample_rate", 48000)
+    parts = []
+    for i, (a, b) in enumerate(keep):
+        ln = b - a
+        fade = min(0.01, ln / 4)
+        parts.append(f"[0:a]atrim=start={a:.4f}:end={b:.4f},asetpts=PTS-STARTPTS,"
+                     f"afade=t=in:d={fade:.3f},afade=t=out:st={max(0.0, ln - fade):.4f}:d={fade:.3f}[k{i}]")
+    graph = ";".join(parts) + ";" + "".join(f"[k{i}]" for i in range(len(keep))) + f"concat=n={len(keep)}:v=0:a=1[out]"
+    ffmpeg.run(["ffmpeg", "-i", audio, "-filter_complex", graph, "-map", "[out]", "-ar", str(sr), "-c:a", "pcm_s16le", out])
+    new = dict(meta)
+    new["duration"] = round(sum(b - a for a, b in keep), 3)
+    new["words"] = [[w, round(remap(float(a)), 3), round(remap(float(b)), 3)] for w, a, b in meta.get("words") or []]
+    out_meta.write_text(json.dumps({"tag": tag, "meta": new}, ensure_ascii=False), encoding="utf-8")
+    return out, new
+
+
+# ---------------------------------------------------------------- время по словам озвучки
+
+def _norm(word: str) -> str:
+    return re.sub(r"[^\wё]", "", str(word).lower().replace("ё", "е"))
+
+
+def anchor_time(value, words: list, default: float = 0.5) -> float:
+    """Число — секунды от начала сцены; строка — момент начала слова озвучки («слово» или «слово#2»)."""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    token, _, nth = str(value).partition("#")
+    want, n = _norm(token), int(nth or 1)
+    for w, a, _b in words or []:
+        if want and _norm(w).startswith(want):
+            n -= 1
+            if n == 0:
+                return max(0.0, float(a) - 0.05)
+    print(f"    ! слово «{value}» не найдено в озвучке — беру {default:.1f} с")
+    return default
+
+
+def resolve_local(scene: Scene, meta: dict | None) -> Scene:
+    """Подставляет время слов в local: highlights[].at/until, bullet_at, overlays[].at/until."""
+    words = (meta or {}).get("words") or []
+    loc = dict(scene.local)
+    if loc.get("highlights"):
+        loc["highlights"] = [{**hl, "at": anchor_time(hl.get("at"), words),
+                              **({"until": anchor_time(hl["until"], words)} if hl.get("until") is not None else {})}
+                             for hl in loc["highlights"]]
+    if loc.get("bullet_at"):
+        loc["bullet_at"] = [anchor_time(x, words, 0.3 + i) for i, x in enumerate(loc["bullet_at"])]
+    if loc.get("overlays"):
+        loc["overlays"] = [{**o, "at": anchor_time(o.get("at", 0.0), words, 0.0),
+                            **({"until": anchor_time(o["until"], words)} if o.get("until") is not None else {})}
+                           for o in loc["overlays"]]
+    return Scene(**{**scene.__dict__, "local": loc})
 
 
 def normalize_clip(src: Path, out: Path, duration: float, settings: Settings) -> Path:
@@ -62,7 +199,7 @@ def normalize_clip(src: Path, out: Path, duration: float, settings: Settings) ->
 
 
 def scene_clip(project: Project, item: TimelineItem, length: float, lib: CharacterLibrary) -> Path:
-    sc = item.scene
+    sc = resolve_local(item.scene, item.meta)
     out = project.scene_clip(sc.id)
     if sc.generator == "local":
         char_img = None
@@ -83,10 +220,13 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
     if extend == "pingpong" and ffmpeg.duration(src) < length - 0.05:
         src = pingpong(src, project.dir("work") / f"{sc.id}.pingpong.mp4", project.settings)
     amb = ambient_config(project.settings, sc.local)
-    if amb.get("enabled") and sc.type in amb.get("apply_to", []):
-        # «Живой слой»: камера, свет, огоньки, пылинки — поверх AI-клипа (бесплатно)
+    live = bool(amb.get("enabled")) and sc.type in amb.get("apply_to", [])
+    overlays = sc.local.get("overlays") or []
+    if live or overlays:
+        # «Живой слой» (камера, свет, огоньки, пылинки) и надписи — поверх AI-клипа (бесплатно)
         base = normalize_clip(src, out.with_name(f"{sc.id}.base.mp4"), length, project.settings)
-        return apply_ambient(base, out, length, project.settings, amb, seed=sc.id, progress=sc.id)
+        return apply_ambient(base, out, length, project.settings, {**amb, "enabled": live}, seed=sc.id,
+                             progress=sc.id, overlays=overlays)
     return normalize_clip(src, out, length, project.settings)
 
 
@@ -166,7 +306,9 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
     clips, lengths = [], []
     for i, it in enumerate(items):
         length = it.duration + (d if i < len(items) - 1 else 0.0)
-        print(f"  сцена {it.scene.id}: {it.scene.type}/{it.scene.generator}, {it.duration:.2f}с")
+        src = project.scene_source(it.scene.id) if it.scene.generator != "local" else None
+        print(f"  сцена {it.scene.id}: {it.scene.type}/{it.scene.generator}, {it.duration:.2f}с"
+              + (f" ← {src.name}" if src else ""))
         clips.append(scene_clip(project, it, length, lib))
         lengths.append(it.duration)
 
@@ -182,7 +324,7 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
     for it in items:
         text = it.scene.subtitle_text
         if text:
-            cues += scene_cues(it.scene.id, text, it.start, scene_voice_meta(project, it.scene.id), it.duration,
+            cues += scene_cues(it.scene.id, text, it.start, it.meta, it.duration,
                                int(st["max_words_per_line"]), int(st["max_chars_per_line"]))
     subs_dir = project.dir("subtitles")
     srt = write_srt(cues, subs_dir / f"{project.id}.srt")
@@ -210,7 +352,10 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
     args += [
         "-filter_complex", f"{vfilter};{afilter}", "-map", "[vout]", "-map", "[aout]",
         "-c:v", settings.get("video.codec"), "-preset", settings.get("video.preset", "medium"),
-        "-crf", str(settings.get("video.crf", 18)), "-pix_fmt", settings.get("video.pix_fmt", "yuv420p"),
+        *(["-b:v", settings.get("video.bitrate"), "-maxrate", settings.get("video.maxrate", settings.get("video.bitrate")),
+           "-bufsize", settings.get("video.bufsize", "30M")] if settings.get("video.bitrate")
+          else ["-crf", str(settings.get("video.crf", 18))]),
+        "-pix_fmt", settings.get("video.pix_fmt", "yuv420p"),
         "-r", str(settings.get("video.fps")), "-c:a", settings.get("video.audio_codec", "aac"),
         "-b:a", settings.get("video.audio_bitrate", "192k"), "-ar", str(settings.get("video.audio_sample_rate", 48000)),
         "-t", f"{total:.3f}", "-movflags", "+faststart", out,
@@ -219,6 +364,6 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
     ffmpeg.run(args)
     (project.dir("output") / "timeline.json").write_text(json.dumps(
         [{"scene": it.scene.id, "start": it.start, "duration": it.duration, "type": it.scene.type,
-          "generator": it.scene.generator} for it in items], ensure_ascii=False, indent=1), encoding="utf-8")
+          "generator": it.scene.generator, "audio": str(it.audio) if it.audio else None} for it in items], ensure_ascii=False, indent=1), encoding="utf-8")
     project.set_status("assembled", assembled_fingerprint=script.fingerprint())
     return out

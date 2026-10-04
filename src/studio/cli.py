@@ -169,9 +169,12 @@ def cmd_scene(a, s):
         script = proj.load_script()
         script.scene(a.scene)
         dest = proj.dir("scenes") / f"{a.scene}.mp4"
-        if dest.exists():
-            dest.rename(dest.with_name(f"{a.scene}.prev-{int(dest.stat().st_mtime)}.mp4"))
-        shutil.copy2(src, dest)
+        data = src.read_bytes()   # читаем до переименований: источником может быть файл из этой же папки
+        # Убираем в архив и основной клип, и результат Lip Sync — иначе он перекрыл бы импортированный файл
+        for old in (dest, dest.with_name(f"{a.scene}.lipsync.mp4")):
+            if old.exists():
+                old.rename(old.with_name(f"{old.stem}.prev-{int(old.stat().st_mtime)}.mp4"))
+        dest.write_bytes(data)
         db = _db(s)
         db.create_job(episode=proj.id, scene_id=a.scene, provider="manual", kind="import", model=None,
                       params={"source": str(src)}, idempotency_key=f"import-{proj.id}-{a.scene}-{dest.stat().st_mtime}",

@@ -13,6 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 from ..config import Settings
+from .local_scenes import draw_overlays
 
 DEFAULTS = {
     "enabled": True,
@@ -24,6 +25,7 @@ DEFAULTS = {
     "dust": 28,            # пылинки
     "grain": 0.035,        # зерно плёнки
     "vignette": 0.28,
+    "twinkle": 0.0,        # пульсация огоньков: 0 — ровный свет (без «мигающих бликов»), 1 — мерцают
 }
 
 
@@ -75,27 +77,30 @@ def _edge_point(rng: random.Random, w: int, h: int) -> tuple[float, float]:
 
 
 def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg: dict, seed: str = "",
-                  progress: str = "") -> Path:
+                  progress: str = "", overlays: list | None = None) -> Path:
+    """Живой слой и/или надписи поверх видео. cfg["enabled"] = False — только надписи (overlays)."""
     w, h, fps = settings.get("video.width"), settings.get("video.height"), settings.get("video.fps")
     n = max(1, round(duration * fps))
     rng = random.Random(seed or src.name)
+    fx = bool(cfg.get("enabled", True))
+    tw = float(cfg.get("twinkle", 0.0))
     warm = [(255, 214, 140), (255, 190, 110), (255, 236, 190), (180, 210, 255)]
     bokeh = []
-    for _ in range(int(cfg["bokeh"])):
+    for _ in range(int(cfg["bokeh"]) if fx else 0):
         x, y = _edge_point(rng, w, h)
         r = rng.randint(14, 34)
         bokeh.append({"x": x, "y": y, "spr": _levels(_sprite(r, rng.choice(warm))), "a": rng.uniform(0.3, 0.6),
                       "ph": rng.uniform(0, 6.28), "sp": rng.uniform(0.6, 1.6), "vy": rng.uniform(-14, -4)})
     dust = []
-    for _ in range(int(cfg["dust"])):
+    for _ in range(int(cfg["dust"]) if fx else 0):
         x, y = _edge_point(rng, w, h)
         dust.append({"x": x, "y": y, "spr": _levels(_sprite(rng.randint(3, 5), (255, 245, 220))), "a": rng.uniform(0.6, 1.0),
                      "vx": rng.uniform(-10, 10), "vy": rng.uniform(-22, -6), "ph": rng.uniform(0, 6.28)})
-    vign = _vignette(w, h, float(cfg["vignette"])) if cfg.get("vignette") else None
-    grain_amt = float(cfg.get("grain") or 0)
+    vign = _vignette(w, h, float(cfg["vignette"])) if fx and cfg.get("vignette") else None
+    grain_amt = float(cfg.get("grain") or 0) if fx else 0.0
     # Заранее: зерно (несколько кадров по кругу) и слои «свет + виньетка» для разных уровней мерцания
     grains = [Image.effect_noise((w // 2, h // 2), 40).resize((w, h)).convert("RGB") for _ in range(6)] if grain_amt else []
-    flick = float(cfg["flicker"])
+    flick = float(cfg["flicker"]) if fx else 0.0
     light_levels = []
     for k in range(LEVELS):
         f = -flick + 2 * flick * k / (LEVELS - 1)            # от «темнее» до «светлее»
@@ -129,9 +134,9 @@ def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg
             ease = p * p * (3 - 2 * p)
             img = Image.frombytes("RGB", (w, h), last)
             # камера: наезд + лёгкий дрейф (субпиксельно)
-            z = 1 + float(cfg["zoom"]) * ease
+            z = 1 + (float(cfg["zoom"]) if fx else 0.0) * ease
             cw, ch = w / z, h / z
-            dx = float(cfg["drift"]) * w * math.sin(ease * math.pi - math.pi / 2) * 0.5
+            dx = (float(cfg["drift"]) if fx else 0.0) * w * math.sin(ease * math.pi - math.pi / 2) * 0.5
             x0 = min(max((w - cw) / 2 + dx, 0), w - cw)
             y0 = (h - ch) * 0.42
             img = img.resize((w, h), Image.BILINEAR, box=(x0, y0, x0 + cw, y0 + ch))
@@ -139,17 +144,19 @@ def apply_ambient(src: Path, out: Path, duration: float, settings: Settings, cfg
             wave = 0.6 * math.sin(t * 2.1) + 0.4 * math.sin(t * 7.3 + 1.7)      # -1…1
             layer = light_levels[min(LEVELS - 1, max(0, int((wave + 1) / 2 * (LEVELS - 1) + 0.5)))].copy()
             for b in bokeh:
-                a = b["a"] * (0.55 + 0.45 * math.sin(t * b["sp"] + b["ph"]))
+                a = b["a"] * (1 - 0.45 * tw + 0.45 * tw * math.sin(t * b["sp"] + b["ph"]))
                 spr = b["spr"][min(LEVELS - 1, int(a * LEVELS))]
                 layer.alpha_composite(spr, (int(b["x"] - spr.width / 2), int(b["y"] + b["vy"] * t - spr.height / 2)))
             for d in dust:
-                a = d["a"] * (0.5 + 0.5 * math.sin(t * 3 + d["ph"]))
+                a = d["a"] * (1 - 0.5 * tw + 0.5 * tw * math.sin(t * 3 + d["ph"]))
                 spr = d["spr"][min(LEVELS - 1, int(a * LEVELS))]
                 x = d["x"] + d["vx"] * t + 6 * math.sin(t * 1.3 + d["ph"])
                 layer.alpha_composite(spr, (int(x), int(d["y"] + d["vy"] * t)))
             img = Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB")
             if grains:
                 img = Image.blend(img, grains[i % len(grains)], grain_amt)
+            if overlays:
+                img = draw_overlays(img, settings, overlays, t)
             enc.stdin.write(img.tobytes())
             if progress and (i + 1) % max(1, n // 4) == 0:
                 print(f"    живой слой {progress}: {int((i + 1) / n * 100)}%", flush=True)

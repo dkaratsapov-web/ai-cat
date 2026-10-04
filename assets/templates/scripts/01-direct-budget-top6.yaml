@@ -23,6 +23,15 @@ scenes:
   prompts:
     kling: The cat talks to the camera with a confident, slightly ironic look, tilts its head, raises one paw a
       little, blinks, monitors flicker softly in the background, ears stay folded, static camera
+  local:
+    ambient:
+      zoom: 0.09
+    overlays:
+    - text: Директ тратит деньги, а заявок нет?
+      accent: заявок нет
+      at: 0.1
+      size: 76
+      y: 250
 - id: s02
   type: character_motion
   duration: 4
@@ -45,19 +54,27 @@ scenes:
     kind: screenshot
     image: metrika_goals.png
     caption: №6 Нет цели на заявку
+    note: 'Пример: цели в Метрике'
     crop:
-    - 0.0239
-    - 0.2125
-    - 0.3708
-    - 0.6801
+    - 40
+    - 212
+    - 620
+    - 412
     highlights:
     - box:
-      - 0.0329
-      - 0.2285
-      - 0.3469
-      - 0.6483
-      at: 1.0
-      label: Нет цели «заявка»
+      - 45
+      - 228
+      - 610
+      - 85
+      at: метрике
+      zoom: 1.15
+    - box:
+      - 45
+      - 326
+      - 610
+      - 85
+      at: автоцели
+      zoom: 1.15
   assets:
   - imports/metrika_goals.png — макет целей Метрики (перерисованный ChatGPT, 1672×941; содержимое совпадает с реальным)
 - id: s06
@@ -82,20 +99,26 @@ scenes:
   local:
     kind: screenshot
     image: search_adjustments.png
-    caption: №4 Корректировки ставок · пример
+    caption: №4 Корректировки ставок
+    note: Поиск · пример настроек
     crop:
-    - 0.035
-    - 0.165
-    - 0.935
-    - 0.71
+    - 58
+    - 155
+    - 1563
+    - 668
     highlights:
     - box:
-      - 0.054
-      - 0.367
-      - 0.898
-      - 0.115
-      at: 1.8
-      label: 'Младше 18: −100%'
+      - 92
+      - 347
+      - 1500
+      - 105
+      at: младше
+      focus:
+      - 470
+      - 330
+      - 1020
+      - 140
+      max_zoom: 2.0
   assets:
   - assets/templates/media/search_adjustments.png — макет корректировок на Поиске (ChatGPT), пример
 - id: s10
@@ -108,20 +131,35 @@ scenes:
   local:
     kind: screenshot
     image: bid_adjustments.png
-    caption: №4 Корректировки в РСЯ · пример
+    caption: №4 Корректировки ставок
+    note: РСЯ · пример настроек
     crop:
     - 14
     - 200
-    - 1058
+    - 1044
     - 830
     highlights:
     - box:
       - 55
+      - 398
+      - 977
+      - 117
+      at: сетях
+      until: мобильные
+      zoom: 1.15
+    - box:
+      - 55
+      - 634
+      - 977
+      - 238
+      at: мобильные
+      zoom: 1.15
+    - box:
+      - 55
       - 515
       - 977
-      - 357
-      at: 2.0
-      label: Устройства — аккуратно
+      - 119
+      at: тв
   assets:
   - assets/templates/media/bid_adjustments.png — макет корректировок (ChatGPT, 1086×1448), пример
 - id: s09
@@ -135,7 +173,8 @@ scenes:
   local:
     kind: screenshot
     image: rsya_placements.png
-    caption: №3 Площадки в РСЯ · пример
+    caption: №3 Площадки в РСЯ
+    note: Пример отчёта
     crop:
     - 0.0117
     - 0.3613
@@ -147,41 +186,55 @@ scenes:
       - 0.4538
       - 0.9736
       - 0.043
-      at: 3.0
-      label: com.* — приложения
-      label_pos: above
+      at: ком
+      color: red
+      focus:
+      - 14
+      - 555
+      - 756
+      - 475
+      max_zoom: 1.6
     - box:
       - 0.0137
       - 0.4967
       - 0.9736
       - 0.043
-      at: 3.0
+      at: ком
+      color: red
     - box:
       - 0.0137
       - 0.627
       - 0.9736
       - 0.043
-      at: 3.0
+      at: ком
+      color: red
     - box:
       - 0.0137
       - 0.7142
       - 0.9736
       - 0.043
-      at: 3.0
+      at: ком
+      color: red
     - box:
       - 0.0137
       - 0.8014
       - 0.9736
       - 0.043
-      at: 3.0
+      at: ком
+      color: red
     - box:
       - 0.0137
       - 0.7578
       - 0.9736
       - 0.043
-      at: 5.0
-      label: dsp-* — в исключения
-      label_pos: above
+      at: диэспи
+      color: red
+      focus:
+      - 14
+      - 1060
+      - 756
+      - 320
+      max_zoom: 1.6
   assets:
   - assets/templates/media/rsya_placements.png — макет отчёта по площадкам (ChatGPT), пример
 - id: s03
@@ -193,27 +246,69 @@ scenes:
   local:
     kind: screenshot
     image: search_queries.png
-    caption: 'Пример: расход без заявок'
+    caption: №2 Чистка запросов
+    note: Пример отчёта, данные условные
     crop:
-    - 0.2273
-    - 0.4251
-    - 0.3349
-    - 0.5154
+    - 335
+    - 398
+    - 1327
+    - 482
     highlights:
     - box:
-      - 0.2344
-      - 0.5441
-      - 0.2171
-      - 0.389
-      at: 0.8
-      label: Мусорные запросы
+      - 337
+      - 508
+      - 1323
+      - 52
+      at: обои
+      color: red
+      focus:
+      - 335
+      - 398
+      - 620
+      - 482
     - box:
-      - 0.4516
-      - 0.5441
-      - 0.1077
-      - 0.389
-      at: 2.6
-      label: 0 заявок
+      - 337
+      - 666
+      - 1323
+      - 52
+      at: обои
+      color: red
+    - box:
+      - 337
+      - 719
+      - 1323
+      - 52
+      at: обои
+      color: red
+    - box:
+      - 1110
+      - 505
+      - 177
+      - 373
+      at: клики
+      focus:
+      - 745
+      - 398
+      - 560
+      - 482
+    - box:
+      - 757
+      - 505
+      - 178
+      - 373
+      at: заплачено
+    - box:
+      - 1290
+      - 505
+      - 176
+      - 373
+      at: ноль
+      color: red
+      focus:
+      - 1100
+      - 398
+      - 560
+      - 482
   assets:
   - imports/search_queries.png — макет отчёта от ChatGPT (1672×941), данные условные
 - id: s04
@@ -224,7 +319,12 @@ scenes:
   visual: Карточка с решением
   local:
     kind: card
-    title: №2 Чистка запросов
+    title: Что делать
+    reveal: single
+    bullet_at:
+    - старте
+    - потом
+    - мусор
     bullets:
     - 'Старт: отчёт по запросам раз в 3 дня'
     - Трафик стал качественным — раз в неделю
@@ -238,10 +338,13 @@ scenes:
   local:
     kind: card
     title: №1 Автотаргетинг на поиске
+    reveal: single
+    bullet_at:
+    - оставьте
+    - остальные
     bullets:
     - 'Оставить: целевые и узкие'
     - Широкие, сопутствующие, альтернативные — выключить
-    footnote: После запуска проверьте отчёт по запросам
 - id: s07
   type: talking
   duration: 4
@@ -252,6 +355,18 @@ scenes:
   prompts:
     kling: The cat points its paw at the viewer and talks with a friendly, confident expression, nods at the end,
       blinks, office lights shimmer in the background, ears stay folded, static camera
+  local:
+    min_duration: 4.4
+    overlays:
+    - text: Пишите в комментариях
+      at: пишите
+      size: 56
+      y: 240
+    - text: «АУДИТ»
+      accent: аудит
+      at: аудит
+      size: 130
+      y: 352
 publication:
   titles:
   - ТОП-6 причин, почему Директ сливает бюджет

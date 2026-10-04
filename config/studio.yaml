@@ -7,6 +7,10 @@ video:
   fps: 30
   codec: libx264
   crf: 18
+  # Итоговый файл: средний битрейт (ТЗ: 12–20 Мбит/с). Уберите bitrate — будет режим постоянного качества (crf)
+  bitrate: 14M
+  maxrate: 18M
+  bufsize: 28M
   preset: medium
   pix_fmt: yuv420p
   audio_codec: aac
@@ -17,6 +21,15 @@ video:
   # Переходы между сценами: "cut" (склейка встык) или "xfade" (плавный)
   transition: xfade
   transition_duration: 0.25
+  # Пауза после фразы внутри сцены, сек
+  voice_tail: 0.15
+  # Сокращение лишних пауз в озвучке (запись и темп не меняются; говорящие сцены не трогаем — там синхрон губ)
+  voice_tighten:
+    enabled: true
+    noise_db: -42        # что считать тишиной
+    lead: 0.05           # сколько тишины оставить перед фразой, сек
+    tail: 0.1            # и после неё
+    max_pause: 0.3       # паузы внутри фразы длиннее этого укорачиваются до него
   # Громкость итогового ролика (EBU R128); для соцсетей обычно -14 LUFS
   target_lufs: -14
   # «Живой слой» поверх сцен с котом (бесплатно, локально): наезд камеры, мерцание света, огоньки, пылинки, зерно.
@@ -26,11 +39,12 @@ video:
     apply_to: [talking, character_motion, ai_scene]
     zoom: 0.05
     drift: 0.012
-    flicker: 0.035
+    flicker: 0.015
     bokeh: 16
     dust: 28
     grain: 0.035
     vignette: 0.28
+    twinkle: 0            # 0 — огоньки светят ровно, без пульсирующих бликов
 
 # Безопасные зоны 9:16: интерфейс Reels/Shorts/Клипов перекрывает верх и низ.
 safe_area:
@@ -44,16 +58,16 @@ subtitles:
   # Имя шрифта для libass. Положите TTF в assets/fonts — он подхватится автоматически.
   font_name: "Montserrat ExtraBold"
   fallback_font_name: "DejaVu Sans"
-  font_size: 82
+  font_size: 54                 # ТЗ: субтитры 42–54 px в кадре 1080×1920
   primary_color: "#FFFFFF"
   highlight_color: "#FFD43B"
   outline_color: "#000000"
-  outline: 6
+  outline: 4
   shadow: 2
   # Отступ снизу (px) — выше нижней безопасной зоны
   margin_v: 560
-  max_words_per_line: 3
-  max_chars_per_line: 18
+  max_words_per_line: 5
+  max_chars_per_line: 26
   uppercase: false
 
 branding:
