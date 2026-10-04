@@ -72,7 +72,7 @@ def test_kling_pricing_and_durations(settings):
     pricing = settings.load_yaml("config/pricing.yaml")
     req = VideoRequest(kind="image2video", model="kling-2.6", duration=7, resolution="720p")
     assert k.billed_duration(req) == 10
-    assert k.estimate_usd(req, pricing) == pytest.approx(0.3 * 10 * 0.14)
+    assert k.estimate_usd(req, pricing) == pytest.approx(0.3 * 10 * pricing["kling"]["unit_usd"])
     av = VideoRequest(kind="avatar", model="avatar", duration=1.0, mode="std")
     assert k.billed_duration(av) == 2.0  # минимум 2 с у Avatar
 
