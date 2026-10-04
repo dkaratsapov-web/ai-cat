@@ -214,6 +214,53 @@ def cmd_voice(a, s):
     return 0
 
 
+DEFAULT_SAMPLE_VOICES = ("alena", "jane", "dasha", "julia", "lera", "masha", "marina", "omazh",
+                         "ermil", "filipp", "zahar", "alexander", "kirill", "anton", "madirus")
+DEFAULT_SAMPLE_TEXT = "Директ сливает бюджет? Мяу. Сейчас разберёмся за тридцать секунд."
+
+
+def cmd_voice_samples(a, s):
+    """Одна фраза разными голосами — чтобы выбрать голос кота на слух."""
+    from .generation.voice import load_preset
+    from .integrations import tts_provider
+    from .integrations.base import ProviderError
+    prov = tts_provider(a.provider, s)
+    ok, why = prov.configured()
+    if not ok:
+        raise RuntimeError(f"TTS '{a.provider}' не настроен: {why}")
+    voices = _split(a.voices) or list(DEFAULT_SAMPLE_VOICES)
+    base = dict(load_preset(s, "default"))
+    pricing = s.load_yaml("config/pricing.yaml")
+    per = prov.estimate_usd(a.text, base, pricing)
+    rub = per * float(pricing.get("yandex", {}).get("rub_per_usd", 90))
+    print(f"{len(voices)} образцов × ~{rub:.2f} ₽ ≈ {rub * len(voices):.1f} ₽")
+    if not Budget(s, _db(s)).confirm("Озвучить образцы?", a.yes):
+        return 0
+    out_dir = s.data_dir / "voice_samples"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    db = _db(s)
+    made = []
+    for v in voices:
+        preset = {**base, "voice": v, "role": a.role, "speed": a.speed, "pitch_shift": a.pitch}
+        tag = "_".join(x for x in (v, a.role or "", f"p{int(a.pitch)}" if a.pitch else "", f"s{a.speed}") if x)
+        dest = out_dir / f"{tag}.wav"
+        try:
+            prov.synthesize(a.text, preset, dest)
+        except ProviderError as e:
+            print(f"  {v}: не получилось ({redact(str(e))[:120]})")
+            continue
+        db.create_job(episode="voice-samples", scene_id=v, provider=a.provider, kind="tts", model=v,
+                      params={"chars": len(a.text)}, idempotency_key=f"sample-{tag}-{a.text}",
+                      est_cost_usd=per, status="succeeded")
+        made.append(dest)
+        print(f"  {v}: {dest.name}")
+    print(f"\nОбразцы: {out_dir}\nПонравившийся голос впишите в config/voices.yaml (voice: …) и выполните "
+          "studio voice <эпизод> --force")
+    if sys.platform == "win32" and made:
+        os.startfile(out_dir)  # type: ignore[attr-defined]  # открыть папку в Проводнике
+    return 0
+
+
 def cmd_generate(a, s):
     from .generation.runner import Runner
     proj = open_project(a.episode, s)
@@ -418,6 +465,16 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--force", action="store_true", help="перегенерировать даже без изменений текста")
     v.add_argument("--yes", action="store_true", help="подтвердить расход без вопроса")
     v.set_defaults(fn=cmd_voice)
+
+    vs = sub.add_parser("voice-samples", help="одна фраза разными голосами — выбрать голос кота")
+    vs.add_argument("--voices", help="через запятую; по умолчанию — 15 русских голосов SpeechKit")
+    vs.add_argument("--text", default=DEFAULT_SAMPLE_TEXT)
+    vs.add_argument("--role", default=None, help="амплуа, например good / friendly / neutral (не у всех голосов)")
+    vs.add_argument("--pitch", type=float, default=0.0, help="сдвиг высоты в Гц, например 150 — выше и мягче")
+    vs.add_argument("--speed", type=float, default=1.1)
+    vs.add_argument("--provider", default="yandex", choices=["yandex"])
+    vs.add_argument("--yes", action="store_true")
+    vs.set_defaults(fn=cmd_voice_samples)
 
     g = sub.add_parser("generate", help="генерация AI-сцен (платно, с подтверждением)")
     g.add_argument("episode")

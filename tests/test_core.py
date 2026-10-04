@@ -288,3 +288,35 @@ def test_security_guards(settings, tmp_path, monkeypatch):
     monkeypatch.setenv("KLING_API_BASE", "http://evil.example.com")
     with pytest.raises(NotConfiguredError):
         KlingProvider(settings)
+
+
+def test_voice_samples_command(settings, tmp_path, monkeypatch):
+    import subprocess
+    from studio import cli
+    from studio.integrations import tts as tts_mod
+
+    pcm = tmp_path / "t.pcm"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "sine=duration=1",
+                    "-ar", "48000", "-ac", "1", "-f", "s16le", str(pcm)], check=True)
+    chunk = json.dumps({"result": {"audioChunk": {"data": base64.b64encode(pcm.read_bytes()).decode()}}})
+    calls = []
+
+    class Resp:
+        def __init__(self, ok):
+            self.status_code = 200 if ok else 400
+            self.text = chunk if ok else '{"error":"unknown voice"}'
+
+    def fake_post(url, headers, json, timeout):  # noqa: A002
+        voice = json["hints"][0]["voice"]
+        calls.append((voice, headers))
+        return Resp(voice != "badvoice")
+
+    monkeypatch.setenv("YANDEX_API_KEY", "yc-key-123456")
+    monkeypatch.setenv("YANDEX_FOLDER_ID", "aje-wrong-folder")
+    monkeypatch.setattr(tts_mod.requests, "post", fake_post)
+    monkeypatch.setattr(cli, "get_settings", lambda: settings)
+    rc = cli.main(["voice-samples", "--voices", "alena,badvoice,jane", "--pitch", "150", "--yes"])
+    assert rc == 0
+    files = sorted(p.name for p in (settings.data_dir / "voice_samples").glob("*.wav"))
+    assert files == ["alena_p150_s1.1.wav", "jane_p150_s1.1.wav"]
+    assert all("x-folder-id" not in h for _, h in calls)  # с API-ключом folder id не отправляется
