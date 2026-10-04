@@ -5,27 +5,30 @@ presets:
   # voice: голос (послушать и выбрать — в демо SpeechKit в консоли Yandex Cloud).
   # role: амплуа (например neutral / good / friendly) — поддерживается не всеми голосами; оставьте null, если сомневаетесь.
   # speed: темп 0.1–3.0; pitch_shift: сдвиг высоты в Гц (-1000…1000) — можно сделать голос «кошачьим».
+  # Голос кота выбран на слух владельцем: ermil + мультяшная обработка ×1.5 (образец ermil_s1.1_cat1.5)
   default:
     provider: yandex
-    voice: filipp
+    voice: ermil
     role: null
     speed: 1.1
     pitch_shift: 0
     # Локальная обработка после озвучки (бесплатно): pitch — во сколько раз выше тон (1.0 — без изменений),
     # formant: shifted — мультяшный/детский тембр, preserved — тот же голос, просто выше
-    effect: {pitch: 1.0, formant: shifted}
+    effect: {pitch: 1.5, formant: shifted}
   calm:
     provider: yandex
-    voice: filipp
+    voice: ermil
     role: null
     speed: 1.0
     pitch_shift: 0
+    effect: {pitch: 1.5, formant: shifted}
   energetic:
     provider: yandex
-    voice: filipp
+    voice: ermil
     role: null
     speed: 1.2
     pitch_shift: 0
+    effect: {pitch: 1.5, formant: shifted}
 
   # --- ElevenLabs (альтернатива: studio voice <id> --provider elevenlabs, voice_preset: elevenlabs) ---
   elevenlabs:
