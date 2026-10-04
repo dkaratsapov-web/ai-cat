@@ -38,7 +38,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button.sm{padding:6px 10px;font-si
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .sc{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
 .thumb{aspect-ratio:9/16;background:#0d0f14;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.thumb img,.thumb video{width:100%;height:100%;object-fit:cover}
+.thumb img,.thumb video{width:100%;height:100%;object-fit:cover}.thumb img.fit{object-fit:contain;background:#fff}
 .thumb .card{color:#fff;padding:18px;font-size:14px;align-self:stretch;width:100%}
 .thumb .card h4{margin:30px 0 12px;font-size:18px}.thumb .card li{margin:6px 0}
 .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:3px 8px;border-radius:999px}
@@ -119,8 +119,8 @@ function render(){const e=ep,n=nextAction(),si=stageIdx(e.status);
    <pre>${esc((p.titles||[]).join("\n"))}\n\n${esc(p.description)}\n\n${esc(p.cta)}\n\n${esc((p.hashtags||[]).join(" "))}</pre><div class="meta">Файлы: projects/${esc(e.id)}/publish/. Публикуете вы сами.</div>`}
  $("#main").innerHTML=h}
 function sceneCard(s){let t;
- if(s.has_clip)t=`<video src="/media/${ep.id}/scenes/${encodeURIComponent(s.clip)}?t=${Date.now()}" muted loop playsinline controls></video>`;
- else if(s.local_image)t=`<img src="/img/${ep.id}/${encodeURIComponent(s.local_image)}">`;
+ if(s.has_clip)t=`<video src="/media/${ep.id}/scenes/${encodeURIComponent(s.clip)}?t=${Date.now()}" muted loop playsinline controls preload="metadata"${s.reference_file?` poster="/ref/${s.reference_file}"`:""}></video>`;
+ else if(s.local_image)t=`<img class="fit" src="/img/${ep.id}/${encodeURIComponent(s.local_image)}">`;
  else if(s.reference_file)t=`<img src="/ref/${s.reference_file}">`;
  else if(s.local_kind==="card"||s.local_kind==="chart")t=`<div class="card"><h4>${esc(s.title||"")}</h4><ul>${(s.bullets||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul></div>`;
  else t=`<div class="card">${esc(s.visual)}</div>`;
