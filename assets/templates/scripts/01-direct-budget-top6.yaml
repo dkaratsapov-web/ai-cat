@@ -97,7 +97,7 @@ scenes:
       at: 1.8
       label: 'Младше 18: −100%'
   assets:
-  - imports/search_adjustments.png — макет корректировок на Поиске (ChatGPT), пример
+  - assets/templates/media/search_adjustments.png — макет корректировок на Поиске (ChatGPT), пример
 - id: s10
   type: screenshot
   duration: 5
@@ -122,7 +122,6 @@ scenes:
       - 357
       at: 2.0
       label: Устройства — аккуратно
-      label_pos: above
   assets:
   - assets/templates/media/bid_adjustments.png — макет корректировок (ChatGPT, 1086×1448), пример
 - id: s09
@@ -184,7 +183,7 @@ scenes:
       label: dsp-* — в исключения
       label_pos: above
   assets:
-  - imports/rsya_placements.png — макет отчёта по площадкам (ChatGPT), пример
+  - assets/templates/media/rsya_placements.png — макет отчёта по площадкам (ChatGPT), пример
 - id: s03
   type: screenshot
   duration: 6
