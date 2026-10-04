@@ -72,39 +72,119 @@ scenes:
     kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
       lens, then it lowers the glass and looks at the camera, desk lamp light flickers softly, ears stay folded,
       static camera
-- id: s10
-  type: infographic
-  duration: 8
+- id: s11
+  type: screenshot
+  duration: 4
   generator: local
-  voiceover: Четвёртое — корректировки ставок. До восемнадцати лет — минус сто процентов, старше пятидесяти пяти
-    — по нише. Мобильные на старте можно выключить.
-  subtitle: Четвёртое — корректировки ставок. До 18 лет — минус 100%, старше 55 — по нише. Мобильные на старте можно
-    выключить.
-  visual: Карточка №4 с корректировками
+  voiceover: Четвёртое — корректировки ставок. Младше восемнадцати — минус сто процентов.
+  subtitle: Четвёртое — корректировки ставок. Младше 18 — минус 100%.
+  visual: 'Макет «Корректировки на Поиске»: подсветка «Младше 18 −100%»'
   local:
-    kind: card
-    title: №4 Корректировки ставок
-    bullets:
-    - 'До 18 лет: −100%'
-    - 'Старше 55: −100%, если не ваша аудитория'
-    - 'Мобильные: аккуратно, на старте можно выключить'
-    footnote: Ориентир, решение зависит от ниши
+    kind: screenshot
+    image: search_adjustments.png
+    caption: №4 Корректировки ставок · пример
+    crop:
+    - 0.035
+    - 0.165
+    - 0.935
+    - 0.71
+    highlights:
+    - box:
+      - 0.054
+      - 0.367
+      - 0.898
+      - 0.115
+      at: 1.8
+      label: 'Младше 18: −100%'
+  assets:
+  - imports/search_adjustments.png — макет корректировок на Поиске (ChatGPT), пример
+- id: s10
+  type: screenshot
+  duration: 5
+  generator: local
+  voiceover: В сетях то же самое. Старше пятидесяти пяти — по нише. Мобильные и ТВ — аккуратно.
+  subtitle: В РСЯ то же самое. Старше 55 — по нише. Мобильные и ТВ — аккуратно.
+  visual: 'Макет «Корректировки в РСЯ»: подсветка строк с устройствами'
+  local:
+    kind: screenshot
+    image: bid_adjustments.png
+    caption: №4 Корректировки в РСЯ · пример
+    crop:
+    - 14
+    - 200
+    - 1058
+    - 830
+    highlights:
+    - box:
+      - 55
+      - 515
+      - 977
+      - 357
+      at: 2.0
+      label: Устройства — аккуратно
+      label_pos: above
+  assets:
+  - assets/templates/media/bid_adjustments.png — макет корректировок (ChatGPT, 1086×1448), пример
 - id: s09
-  type: infographic
+  type: screenshot
   duration: 6
   generator: local
   voiceover: 'Третье — площадки в рекламной сети. Откройте отчёт по площадкам: приложения «ком» и площадки «ди-эс-пи»
     — в исключения.'
   subtitle: 'Третье — площадки в РСЯ. Откройте отчёт по площадкам: приложения com.* и площадки dsp-* — в исключения.'
-  visual: Карточка №3 про площадки РСЯ
+  visual: 'Макет «Отчёт по площадкам»: подсветка приложений com.*, затем площадки dsp-*'
   local:
-    kind: card
-    title: №3 Площадки в РСЯ
-    bullets:
-    - Отчёт по площадкам — регулярно
-    - Приложения com.* — в исключения
-    - Площадки dsp-* — в исключения
-    footnote: Смотрите расход и заявки по каждой площадке
+    kind: screenshot
+    image: rsya_placements.png
+    caption: №3 Площадки в РСЯ · пример
+    crop:
+    - 0.0117
+    - 0.3613
+    - 0.9766
+    - 0.528
+    highlights:
+    - box:
+      - 0.0137
+      - 0.4538
+      - 0.9736
+      - 0.043
+      at: 3.0
+      label: com.* — приложения
+      label_pos: above
+    - box:
+      - 0.0137
+      - 0.4967
+      - 0.9736
+      - 0.043
+      at: 3.0
+    - box:
+      - 0.0137
+      - 0.627
+      - 0.9736
+      - 0.043
+      at: 3.0
+    - box:
+      - 0.0137
+      - 0.7142
+      - 0.9736
+      - 0.043
+      at: 3.0
+    - box:
+      - 0.0137
+      - 0.8014
+      - 0.9736
+      - 0.043
+      at: 3.0
+    - box:
+      - 0.0137
+      - 0.7578
+      - 0.9736
+      - 0.043
+      at: 5.0
+      label: dsp-* — в исключения
+      label_pos: above
+  assets:
+  - imports/rsya_placements.png — макет отчёта по площадкам (ChatGPT), пример
 - id: s03
   type: screenshot
   duration: 6

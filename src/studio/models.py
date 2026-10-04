@@ -191,7 +191,7 @@ class Script:
             if s.generator in PAID_GENERATORS and not (s.prompts.get(s.generator) or s.visual):
                 errors.append(f"{s.id}: для генератора {s.generator} нужен промпт (prompts.{s.generator}) или visual")
             for hl in s.local.get("highlights", []) or []:
-                extra = set(hl) - {"box", "at", "label"}
+                extra = set(hl) - {"box", "at", "label", "label_pos"}
                 if extra:
                     errors.append(f"{s.id}: в рамке лишние поля {sorted(extra)} — возьмите label в кавычки, если в нём есть запятая")
             if s.generator == "local" and not s.local.get("kind"):

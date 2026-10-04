@@ -304,7 +304,7 @@ def redact_boxes(img: Image.Image, boxes: list) -> Image.Image:
 
 
 def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Frame:
-    """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...'}], caption,
+    """local: {kind: screenshot, image: path, highlights: [{box: [x,y,w,h], at: 1.0, label: '...', label_pos: below|above}], caption,
                redact: [[x,y,w,h], ...], crop: [x,y,w,h]}  — redact размывает конфиденциальное,
                crop оставляет нужную часть; координаты — пиксели исходника или доли 0–1
 
@@ -366,6 +366,8 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
                                  outline=(*accent, 255), width=width, fill=(*accent, 40))
             if hl.get("label"):
                 lx, ly = sx + x, sy + y + bh + 20
+                if hl.get("label_pos") == "above":  # подпись над рамкой, если под ней важные строки
+                    ly = sy + y - 20 - 64 - 8
                 tw = dd.textlength(hl["label"], font=lab_f)
                 lx = min(lx, w - tw - 60)
                 dd.rounded_rectangle((lx - 16, ly, lx + tw + 16, ly + 64), radius=14, fill=(*accent, 240))
