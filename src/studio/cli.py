@@ -341,7 +341,9 @@ def cmd_jobs(a, s):
 def cmd_assemble(a, s):
     from .editing.assemble import assemble
     proj = open_project(a.episode, s)
-    out = assemble(proj, music=Path(a.music) if a.music else None, burn_subtitles=not a.no_subs)
+    suffix = ("-nomusic" if a.no_music else "") + ("-nosubs" if a.no_subs else "")
+    out = assemble(proj, music=Path(a.music) if a.music else None, burn_subtitles=not a.no_subs,
+                   use_music=not a.no_music, suffix=suffix)
     _db(s).log("assemble", {"file": out.name}, episode=proj.id)
     print(f"Готово: {out}\nДальше: studio qa {proj.id}")
     return 0
@@ -558,6 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("episode")
     a.add_argument("--music")
     a.add_argument("--no-subs", action="store_true")
+    a.add_argument("--no-music", action="store_true", help="версия без музыки (файл …-nomusic.mp4)")
     a.set_defaults(fn=cmd_assemble)
 
     q = sub.add_parser("qa", help="техническая проверка")

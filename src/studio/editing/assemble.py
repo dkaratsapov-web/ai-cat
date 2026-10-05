@@ -183,7 +183,9 @@ def resolve_local(scene: Scene, meta: dict | None) -> Scene:
         loc["bullet_at"] = [anchor_time(x, words, 0.3 + i) for i, x in enumerate(loc["bullet_at"])]
     if loc.get("overlays"):
         loc["overlays"] = [{**o, "at": anchor_time(o.get("at", 0.0), words, 0.0),
-                            **({"until": anchor_time(o["until"], words)} if o.get("until") is not None else {})}
+                            **({"until": anchor_time(o["until"], words)} if o.get("until") is not None else {}),
+                            **({"items": [{**it, "at": anchor_time(it.get("at", 0.0), words, 0.0)}
+                                          for it in o["items"]]} if o.get("items") else {})}
                            for o in loc["overlays"]]
     return Scene(**{**scene.__dict__, "local": loc})
 
@@ -262,7 +264,36 @@ def pingpong(src: Path, out: Path, settings: Settings, repeats: int = 3) -> Path
     return out
 
 
-def concat_video(clips: list[Path], lengths: list[float], out: Path, settings: Settings) -> Path:
+def _xfade_names() -> set[str]:
+    try:
+        proc = ffmpeg.run(["ffmpeg", "-h", "filter=xfade"])
+        return set(re.findall(r"^\s{4,}(\w+)\s+-?\d+\s", proc.stdout or "", re.M))
+    except Exception:  # noqa: BLE001
+        return {"fade"}
+
+
+def transition_name(prev: Scene, nxt: Scene, settings: Settings, available: set[str]) -> str:
+    """Переход по смыслу: кот → скрин «пролёт», скрин → скрин «свайп», к карточке — сдвиг вверх.
+
+    Своё значение для сцены: local.transition (переход НА эту сцену)."""
+    rules = {"default": "fade", "video_to_local": "zoomin", "local_to_local": "smoothleft",
+             "to_card": "smoothup", "to_video": "fade", **(settings.get("video.transitions") or {})}
+    name = nxt.local.get("transition")
+    if not name:
+        prev_local, next_local = prev.generator == "local", nxt.generator == "local"
+        if not next_local:
+            name = rules["to_video"]
+        elif nxt.local.get("kind") == "card":
+            name = rules["to_card"]
+        elif prev_local:
+            name = rules["local_to_local"]
+        else:
+            name = rules["video_to_local"]
+    return name if name in available else "fade"
+
+
+def concat_video(clips: list[Path], lengths: list[float], out: Path, settings: Settings,
+                 scenes: list[Scene] | None = None) -> Path:
     mode = settings.get("video.transition", "cut")
     d = float(settings.get("video.transition_duration", 0.25))
     if mode != "xfade" or len(clips) < 2:
@@ -278,10 +309,12 @@ def concat_video(clips: list[Path], lengths: list[float], out: Path, settings: S
     chain = []
     prev = "[0:v]"
     offset = 0.0
+    available = _xfade_names() if scenes else {"fade"}
     for i in range(1, len(clips)):
         offset += lengths[i - 1]
         label = f"[v{i}]"
-        chain.append(f"{prev}[{i}:v]xfade=transition=fade:duration={d}:offset={offset:.3f}{label}")
+        kind = transition_name(scenes[i - 1], scenes[i], settings, available) if scenes else "fade"
+        chain.append(f"{prev}[{i}:v]xfade=transition={kind}:duration={d}:offset={offset:.3f}{label}")
         prev = label
     args += ["-filter_complex", ";".join(chain), "-map", prev, "-c:v", settings.get("video.codec"),
              "-preset", "veryfast", "-crf", str(settings.get("video.crf", 18)), "-pix_fmt", "yuv420p", out]
@@ -308,7 +341,8 @@ def build_voice_track(items: list[TimelineItem], out: Path, settings: Settings) 
     return out
 
 
-def assemble(project: Project, *, music: Path | None = None, burn_subtitles: bool = True) -> Path:
+def assemble(project: Project, *, music: Path | None = None, burn_subtitles: bool = True,
+             use_music: bool = True, suffix: str = "") -> Path:
     settings = project.settings
     script = project.load_script()
     if project.status in ("draft", "cancelled") or not project.is_script_approved():
@@ -334,7 +368,7 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
 
     work = project.dir("work")
     print(f"  склейка {len(clips)} сцен с переходами…", flush=True)
-    video = concat_video(clips, lengths, work / "video.mp4", settings)
+    video = concat_video(clips, lengths, work / "video.mp4", settings, scenes=[it.scene for it in items])
     voice = build_voice_track(items, work / "voice.wav", settings)
     total = round(sum(lengths), 3)
 
@@ -355,13 +389,17 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
 
     # Финальный рендер: видео + голос (+ музыка с дакингом) + субтитры + громкость
     music = music or (settings.root / settings.get("music.default_track") if settings.get("music.default_track") else None)
-    out = project.final_video
+    if not use_music:
+        music = None
+    out = project.final_video.with_name(project.final_video.stem + suffix + project.final_video.suffix) if suffix else project.final_video
     args: list = ["ffmpeg", "-i", video, "-i", voice]
     lufs = settings.get("video.target_lufs", -14)
     if music and Path(music).exists():
         vol = settings.get("music.volume", 0.12)
         args += ["-stream_loop", "-1", "-i", music]
-        afilter = (f"[1:a]asplit=2[vo][sc];[2:a]volume={vol},atrim=duration={total:.3f}[mu];"
+        fo = max(0.0, total - 1.5)
+        afilter = (f"[1:a]asplit=2[vo][sc];[2:a]volume={vol},atrim=duration={total:.3f},"
+                   f"afade=t=in:d=0.6,afade=t=out:st={fo:.3f}:d=1.5[mu];"
                    f"[mu][sc]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=300[duck];"
                    f"[vo][duck]amix=inputs=2:duration=first:normalize=0,loudnorm=I={lufs}:TP=-1.5:LRA=11[aout]")
     else:

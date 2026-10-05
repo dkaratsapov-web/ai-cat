@@ -159,7 +159,11 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     for ov in overlays:
-        if ov.get("style") == "label":   # маркировка рекламы: мелко, но читаемо, весь показ сцены, без анимации
+        style = ov.get("style")
+        if style in ("rank", "hero", "icons"):
+            _draw_styled(layer, settings, ov, t)
+            continue
+        if style == "label":   # маркировка рекламы: мелко, но читаемо, весь показ сцены, без анимации
             f = fonts.font(settings.fonts_dir, int(ov.get("size", 34)), bold=False)
             lines = wrap(d, ov["text"], f, w - sa["left"] - sa["right"] - 32)
             y0 = float(ov.get("y", sa["top"] - 120))
@@ -208,6 +212,106 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
     base = img.convert("RGBA")
     base.alpha_composite(layer)
     return base.convert("RGB")
+
+
+def _shadow_text(layer: Image.Image, xy: tuple[float, float], text: str, font, fill, alpha: int) -> None:
+    """Текст с мягкой тенью (вместо «коробок»): читается на любом фоне."""
+    sh = Image.new("RGBA", layer.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).text((xy[0], xy[1] + 5), text, font=font, fill=(0, 0, 0, int(190 * alpha / 255)))
+    layer.alpha_composite(sh.filter(ImageFilter.GaussianBlur(9)))
+    ImageDraw.Draw(layer).text(xy, text, font=font, fill=(*fill, alpha))
+
+
+def _draw_styled(layer: Image.Image, settings: Settings, ov: dict, t: float) -> None:
+    """Фирменные стили надписей.
+
+    rank  — плашка рейтинга: жёлтый квадрат с цифрой + иконка(и) сервиса + название; выезжает слева.
+    hero  — крупный заголовок без плашки, мягкая тень, слова из accent — цветом бренда.
+    icons — ряд иконок (соцсети), каждая «выпрыгивает» в своё время (items[].at), подпись под иконкой.
+    """
+    w = layer.width
+    sa = settings.get("safe_area")
+    accent = hex_rgb(settings.get("branding.accent_color"))
+    d = ImageDraw.Draw(layer)
+    style = ov["style"]
+    if style == "icons":
+        items = ov.get("items") or []
+        size = int(ov.get("size", 96))
+        gap = int(ov.get("gap", 54))
+        lab_f = fonts.font(settings.fonts_dir, int(ov.get("label_size", 34)))
+        # ширина ячейки — по самой длинной подписи, чтобы подписи не слипались
+        slot = max([size] + [d.textlength(it.get("label", ""), font=lab_f) for it in items]) + gap
+        while slot * len(items) > w - 2 * 30 and lab_f.size > 22:
+            lab_f = fonts.font(settings.fonts_dir, lab_f.size - 2)
+            slot = max([size] + [d.textlength(it.get("label", ""), font=lab_f) for it in items]) + gap * 0.6
+        x = (w - slot * len(items)) / 2 + (slot - size) / 2
+        y = float(ov.get("y", 1050))
+        for it in items:
+            at = float(it.get("at", 0))
+            if t >= at:
+                p = ease_out((t - at) / 0.3)
+                s2 = max(1, int(size * (0.6 + 0.4 * p)))
+                logo = _logo(settings, it["image"], s2)
+                if logo:
+                    lg = logo.copy()
+                    lg.putalpha(lg.getchannel("A").point(lambda v, k=p: int(v * k)))
+                    layer.alpha_composite(lg, (int(x + (size - s2) / 2), int(y + (size - s2) / 2)))
+                if it.get("label"):
+                    tw = d.textlength(it["label"], font=lab_f)
+                    _shadow_text(layer, (x + (size - tw) / 2, y + size + 14), it["label"], lab_f, (255, 255, 255), int(255 * p))
+            x += slot
+        return
+    at = float(ov.get("at", 0.0))
+    if t < at:
+        return
+    p = ease_out((t - at) / float(ov.get("fade", 0.4)))
+    a = int(255 * p)
+    if style == "hero":
+        size = int(ov.get("size", 110))
+        f = fonts.font(settings.fonts_dir, size)
+        hl = str(ov.get("accent", "")).lower().split()
+        lines = wrap(d, ov["text"], f, w - 2 * sa["left"])
+        y = float(ov.get("y", 1000)) + (1 - p) * 24
+        for line in lines:
+            xx = (w - d.textlength(line, font=f)) / 2
+            for word in line.split(" "):
+                plain = word.strip("«»\"'.,!?:;").lower()
+                color = accent if plain and plain in hl else (255, 255, 255)
+                _shadow_text(layer, (xx, y), word, f, color, a)
+                xx += d.textlength(word + " ", font=f)
+            y += int(size * 1.12)
+        return
+    # rank
+    hgt = int(ov.get("height", 104))
+    num_f = fonts.font(settings.fonts_dir, int(hgt * 0.68))
+    txt_f = fonts.font(settings.fonts_dir, int(ov.get("size", 50)))
+    imgs = ov.get("image") or []
+    imgs = [imgs] if isinstance(imgs, str) else list(imgs)
+    icon = int(hgt * 0.62)
+    logos = [lg for lg in (_logo(settings, n, icon) for n in imgs) if lg]
+    text = ov.get("text", "")
+    text_w = d.textlength(text, font=txt_f)
+    plate_w = hgt + 24 + sum(lg.width + 14 for lg in logos) + (10 if logos else 0) + text_w + 34
+    x0 = sa["left"] - (1 - p) * 90
+    y0 = float(ov.get("y", 1060))
+    plate = Image.new("RGBA", layer.size, (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle((x0, y0, x0 + plate_w, y0 + hgt), radius=26, fill=(14, 16, 22, 220),
+                         outline=(255, 255, 255, 46), width=2)
+    pd.rounded_rectangle((x0, y0, x0 + hgt, y0 + hgt), radius=26, fill=(*accent, 255))
+    num = str(ov.get("rank", ""))
+    nw = pd.textlength(num, font=num_f)
+    nb = pd.textbbox((0, 0), num, font=num_f)
+    pd.text((x0 + (hgt - nw) / 2, y0 + (hgt - (nb[3] - nb[1])) / 2 - nb[1]), num, font=num_f, fill=(20, 20, 20, 255))
+    xx = x0 + hgt + 24
+    for lg in logos:
+        plate.alpha_composite(lg, (int(xx), int(y0 + (hgt - lg.height) / 2)))
+        xx += lg.width + 14
+    xx += 10 if logos else 0
+    tb = pd.textbbox((0, 0), text, font=txt_f)
+    pd.text((xx, y0 + (hgt - (tb[3] - tb[1])) / 2 - tb[1]), text, font=txt_f, fill=(255, 255, 255, 255))
+    plate.putalpha(plate.getchannel("A").point(lambda v, k=p: int(v * k)))
+    layer.alpha_composite(plate)
 
 
 _LOGOS: dict = {}
@@ -505,14 +609,19 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
     dur = max(scene.duration, 0.1)
     drift = float(cfg.get("zoom_to", 1.03)) - 1   # лёгкое общее «дыхание» камеры за сцену
 
+    enter = float(cfg.get("enter", 0.55))   # «вылет» панели: подъём + лёгкое увеличение
+
     def frame(t: float) -> Image.Image:
         sc, cx, cy = camera(t)
         sc *= 1 + drift * ease_io(t / dur)
         cx, cy = clamp_center(sc, cx, cy)
+        e = ease_out(t / enter) if enter > 0 else 1.0
+        sc *= 0.9 + 0.1 * e
+        view_cy = view_cy0 + (1 - e) * 90
         # видимая часть исходника → панель на экране
         vx0, vy0 = max(ox, cx - avail_w / 2 / sc), max(oy, cy - avail_h / 2 / sc)
         vx1, vy1 = min(ox + cw, cx + avail_w / 2 / sc), min(oy + ch, cy + avail_h / 2 / sc)
-        px0, py0 = view_cx0 + (vx0 - cx) * sc, view_cy0 + (vy0 - cy) * sc
+        px0, py0 = view_cx0 + (vx0 - cx) * sc, view_cy + (vy0 - cy) * sc
         pw, ph = max(1, round((vx1 - vx0) * sc)), max(1, round((vy1 - vy0) * sc))
         out = base.copy()
         sh = Image.new("RGBA", (pw + 60, ph + 60), (0, 0, 0, 0))
@@ -536,8 +645,8 @@ def screenshot_frames(img: Image.Image, scene: Scene, settings: Settings) -> Fra
             color = HL_COLORS.get(hl.get("color", "accent")) or accent
             fill_a = 70 if hl.get("color") == "red" else 46
             bx, by, bw, bh = to_px(hl["box"], src_w, src_h)
-            x0, y0 = view_cx0 + (bx - cx) * sc, view_cy0 + (by - cy) * sc
-            x1, y1 = x0 + bw * sc, y0 + bh * sc
+            x0, y0 = view_cx0 + (bx - cx) * sc, view_cy + (by - cy) * sc
+            x1, y1 = x0 + bw * sc * (0.15 + 0.85 * ease_io((t - at) / 0.35)), y0 + bh * sc   # рамка «прорисовывается»
             dd.rounded_rectangle((x0 - 6, y0 - 6, x1 + 6, y1 + 6), radius=14,
                                  outline=(*color, int(255 * p)), width=6, fill=(*color, int(fill_a * p)))
             if hl.get("label"):

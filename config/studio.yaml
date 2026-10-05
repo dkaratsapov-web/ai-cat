@@ -20,7 +20,14 @@ video:
   max_duration: 60          # обычные ролики 20–35 с; ТОПы и списки — до 60 с
   # Переходы между сценами: "cut" (склейка встык) или "xfade" (плавный)
   transition: xfade
-  transition_duration: 0.25
+  transition_duration: 0.35
+  # Переходы по смыслу (имена — эффекты FFmpeg xfade): кот → скрин «пролёт», скрин → скрин «свайп»,
+  # к карточке — сдвиг вверх, к коту — растворение. Для сцены можно задать local.transition
+  transitions:
+    video_to_local: zoomin
+    local_to_local: smoothleft
+    to_card: smoothup
+    to_video: fade
   # Пауза после фразы внутри сцены, сек
   voice_tail: 0.15
   # Сокращение лишних пауз в озвучке (запись и темп не меняются; говорящие сцены не трогаем — там синхрон губ)
@@ -79,8 +86,9 @@ branding:
 
 music:
   # Путь к фоновой музыке (относительно корня) или null. Используйте только треки с правом коммерческого использования.
-  default_track: null
-  volume: 0.12
+  # Свой трек (сгенерирован tools/make_audio.py --tech, без чужих лицензий). null — без музыки
+  default_track: assets/music/tech_pulse.mp3
+  volume: 0.22
   ducking: true
 
 # Провайдеры по умолчанию для типов сцен (можно переопределить в сцене полем generator)
