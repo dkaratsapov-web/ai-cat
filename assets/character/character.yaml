@@ -703,6 +703,106 @@ references:
   - 0.35
   location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
   outfit: black hoodie with a small white airplane logo on the chest
+- id: office_dashboard_point
+  file: references/office_dashboard_point.jpg
+  source_file: references/office_dashboard_point.jpg
+  kind: reference
+  angle: dashboard_point
+  description: 'Офис ночью: показывает лапой на дашборд рекламных кампаний, смотрит в камеру'
+  status: pending
+  sha256: f9ada3dbaff25023
+  added_at: '2026-10-06T01:40:00+00:00'
+  generation:
+    prompt: офисные кадры от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_29_48-1.png
+  use: talking
+  focus:
+  - 0.55
+  - 0.38
+  location: 'night marketing office: monitors with ad dashboards, whiteboard with plans, sticky notes, laptop with platform stickers, coffee, plants, warm lamps'
+  outfit: black hoodie with a small white paper-plane logo on the chest
+- id: office_phone_gesture
+  file: references/office_phone_gesture.jpg
+  source_file: references/office_phone_gesture.jpg
+  kind: reference
+  angle: phone_gesture
+  description: 'Офис ночью: телефон у уха, жестикулирует лапой'
+  status: pending
+  sha256: 3df6e00fb735654f
+  added_at: '2026-10-06T01:40:00+00:00'
+  generation:
+    prompt: офисные кадры от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_29_49-2.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'night marketing office: monitors with ad dashboards, whiteboard with plans, sticky notes, laptop with platform stickers, coffee, plants, warm lamps'
+  outfit: black hoodie with a small white paper-plane logo on the chest
+- id: office_typing_look
+  file: references/office_typing_look.jpg
+  source_file: references/office_typing_look.jpg
+  kind: reference
+  angle: typing_look
+  description: 'Офис ночью: печатает на ноутбуке, смотрит в камеру'
+  status: pending
+  sha256: df07beb50156e734
+  added_at: '2026-10-06T01:40:00+00:00'
+  generation:
+    prompt: офисные кадры от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_29_50-3.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.42
+  location: 'night marketing office: monitors with ad dashboards, whiteboard with plans, sticky notes, laptop with platform stickers, coffee, plants, warm lamps'
+  outfit: black hoodie with a small white paper-plane logo on the chest
+- id: office_coffee_look
+  file: references/office_coffee_look.jpg
+  source_file: references/office_coffee_look.jpg
+  kind: reference
+  angle: coffee_look
+  description: 'Офис ночью: держит стаканчик кофе, смотрит в камеру'
+  status: pending
+  sha256: bf47116224f1fe92
+  added_at: '2026-10-06T01:40:00+00:00'
+  generation:
+    prompt: офисные кадры от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_29_52-4.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'night marketing office: monitors with ad dashboards, whiteboard with plans, sticky notes, laptop with platform stickers, coffee, plants, warm lamps'
+  outfit: black hoodie with a small white paper-plane logo on the chest
+- id: office_whiteboard_plan
+  file: references/office_whiteboard_plan.jpg
+  source_file: references/office_whiteboard_plan.jpg
+  kind: reference
+  angle: whiteboard_plan
+  description: 'Офис ночью: стоит у доски «Маркетинговый план», показывает маркером'
+  status: pending
+  sha256: 7bc8d92ae58d6b4b
+  added_at: '2026-10-06T01:40:00+00:00'
+  generation:
+    prompt: офисные кадры от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_29_53-5.png
+  use: talking
+  focus:
+  - 0.45
+  - 0.35
+  location: 'night marketing office: monitors with ad dashboards, whiteboard with plans, sticky notes, laptop with platform stickers, coffee, plants, warm lamps'
+  outfit: black hoodie with a small white paper-plane logo on the chest
 
 planned_angles:
 - angle: front_laptop

@@ -1,4 +1,4 @@
-# v4 — текст владельца по каждому каналу + правки директора (v3): плашки-смыслы (note), перекат цифр рейтинга, читаемые субтитры, чистый вход в CTA.
+# v5 — текст владельца + правки директора + замена повторяющихся кадров (docs/tz/fitness-v5.md): плашки-смыслы (note), перекат цифр рейтинга, читаемые субтитры, чистый вход в CTA.
 id: template
 title: ТОП-5 инструментов для продвижения фитнес-студии
 content_type: expert
@@ -206,13 +206,13 @@ scenes:
   type: character_motion
   duration: 5
   generator: kling
-  reference: fit_flipchart_logo
+  reference: office_dashboard_point
   voiceover: Можно точно работать по географии — например, задать локацию один–два километра от локации студии.
   subtitle: Можно точно работать по географии — например, задать локацию 1–2 км от локации студии.
-  visual: '[студия] Кот у флипчарта с указкой, логотип на фоне'
+  visual: '[офис] Кот показывает лапой на кабинет рекламы на мониторе — настройка гео'
   prompts:
-    kling: The cat taps the flipchart with the pointer, then looks at the camera and nods, warm studio lights glow
-      softly, ears stay folded, static camera
+    kling: The cat turns its head to the monitor and points at the advertising dashboard with its paw, studying it
+      closely, the monitor glows softly, steam rises from the coffee, ears stay folded, static camera
   local:
     overlays:
     - style: note
@@ -223,19 +223,16 @@ scenes:
       y: 1080
 - id: s07
   type: character_motion
-  duration: 4
-  generator: higgsfield
-  reference: fit_walk_neon
+  duration: 5
+  generator: kling
+  reference: fit_paw_mat
   voiceover: А ещё ВэКа часто остаётся доступным, когда начинаются проблемы со связью.
   subtitle: А ещё VK часто остаётся доступным, когда начинаются проблемы со связью.
-  visual: '[студия] Кот идёт к камере, синие арки и зеркала'
+  visual: '[студия] Кот на коврике уверенно тянет лапу к зрителю — «VK на связи»'
   prompts:
-    higgsfield: The cat walks toward the camera between glowing blue arches, tail sways, mirror reflections stay
-      stable, ears stay folded, static camera
-    kling: The cat walks toward the camera between glowing blue arches, tail sways, mirror reflections stay stable,
-      ears stay folded, static camera
+    kling: The cat sits on the yoga mat and calmly stretches its paw toward the camera with a confident look, then
+      slowly lowers it, warm lights glow softly, neon arches stay steady, ears stay folded, static camera
   local:
-    model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
     overlays:
     - style: note
@@ -388,19 +385,18 @@ scenes:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
 - id: s13
-  type: character_motion
-  duration: 5.0
-  generator: higgsfield
-  reference: fit_walk_low
+  type: talking
+  duration: 4
+  generator: kling
+  reference: fit_present_mirror
   voiceover: Потому что в фитнесе покупают не только тренировку.
-  visual: '[студия] Кот крадётся к камере, арки'
+  visual: '[студия] Кот у зеркала говорит в камеру — подводка к кульминации'
   prompts:
-    higgsfield: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow
-      steadily, ears stay folded, static camera
-    kling: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow steadily,
-      ears stay folded, static camera
+    kling: The cat talks to the camera thoughtfully, a small gesture with its paw toward the mirror, blinks
+      naturally, small head turns, calm breathing, whiskers twitch slightly, mirror reflection stays stable, ears
+      stay folded, static camera
   local:
-    model: bytedance/seedance-2.0/image-to-video
+    mode: pro
     transition: smoothleft
     ambient:
       zoom: 0.08
@@ -428,7 +424,7 @@ scenes:
       y: 1120
 - id: s14
   type: talking
-  duration: 3.3
+  duration: 7
   generator: kling
   reference: fit_tablet_mat
   voiceover: Напишите «фитнес» — пришлю бесплатный чек-лист по запуску любой из перечисленных в ролике платформ и проконсультирую.
