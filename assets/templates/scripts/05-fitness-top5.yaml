@@ -138,8 +138,8 @@ scenes:
   duration: 5.0
   generator: kling
   reference: fit_phone_mat
-  voiceover: Для небольших городов от двухсот до пятисот тысяч жителей может работать очень неплохо —
-  subtitle: Для небольших городов от 200 до 500 тысяч жителей может работать очень неплохо —
+  voiceover: Для небольших городов от двухсот до пятисот тысяч жителей работает довольно-таки хорошо —
+  subtitle: Для небольших городов от 200 до 500 тысяч жителей работает довольно-таки хорошо —
   visual: '[студия] Кот на коврике смотрит смартфон'
   prompts:
     kling: The cat lies on the yoga mat and scrolls the smartphone with its paw, looks at the screen, blinks, soft
