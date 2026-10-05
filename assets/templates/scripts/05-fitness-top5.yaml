@@ -1,4 +1,4 @@
-# v3 — по аудиту директора: плашки-смыслы (note), перекат цифр рейтинга, читаемые субтитры, чистый вход в CTA.
+# v4 — текст владельца по каждому каналу + правки директора (v3): плашки-смыслы (note), перекат цифр рейтинга, читаемые субтитры, чистый вход в CTA.
 id: template
 title: ТОП-5 инструментов для продвижения фитнес-студии
 content_type: expert
@@ -7,7 +7,7 @@ idea: 'Кот «выезжает в поле»: офис (аналитика) ч
 audience: Владельцы фитнес-студий (в т.ч. женских), управляющие, тренеры, предприниматели в спорте и wellness
 problem: Непонятно, какие каналы продвижения работают для локальной фитнес-студии
 format: ТОП-5 обратным отсчётом, офис ↔ студия, каждая сцена — отдельный AI-клип 3–5 с
-target_duration: 50
+target_duration: 90
 tone: экспертно, динамично, с лёгкой иронией
 hook: Топ-пять инструментов для привлечения клиентов в фитнес-студию! Досмотрите до конца — первое место вас обязательно удивит!
 cta: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
@@ -54,7 +54,7 @@ scenes:
   duration: 2
   generator: kling
   reference: typing_evening
-  voiceover: Пятое — Яндекс Директ.
+  voiceover: Пятое место — Яндекс Директ.
   visual: '[офис] Кот быстро печатает, смотрит аналитику'
   prompts:
     kling: The cat types quickly on the laptop keyboard, the screen flickers softly, steam rises from the coffee,
@@ -73,7 +73,7 @@ scenes:
   duration: 3
   generator: higgsfield
   reference: fit_walk_arches
-  voiceover: Где-то заходит отлично, а где-то выжигает спрос.
+  voiceover: Инструмент сильный, но для фитнеса очень зависит от локации
   visual: '[студия] Кот идёт по залу к камере на фоне арок'
   prompts:
     higgsfield: The cat walks calmly toward the camera, tail moves naturally, reflections on the floor and neon
@@ -83,11 +83,32 @@ scenes:
   local:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
+- id: s03b
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: walking_office
+  voiceover: и от пула продвигаемых услуг. Где-то заходит отлично,
+  visual: '[офис] Кот идёт по офису к камере'
+  prompts:
+    kling: The cat walks toward the camera through the office with confident steps, monitors flicker softly in the
+      background, tail sways, ears stay folded, static camera
+- id: s03c
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: shock_monitor
+  voiceover: а где-то просто выжигает спрос. Ситуативно!
+  visual: '[офис] Кот в шоке от падающего графика — «выжигает спрос»'
+  prompts:
+    kling: The cat reacts in shock to the falling chart on the monitor, paws near its face, eyes widen, then it
+      slowly shakes its head, the monitor graph flickers, ears stay folded, static camera
+  local:
     overlays:
     - style: note
       text: "Есть спрос — работает.\nНет спроса — бюджет сгорает"
       accent: сгорает
-      at: 0.3
+      at: выжигает
       size: 46
       y: 1080
 - id: s04
@@ -96,6 +117,7 @@ scenes:
   generator: kling
   reference: phone_call
   voiceover: Четвёртое — Телеграм Эдс.
+  subtitle: Четвёртое — Telegram Ads.
   visual: '[офис] Кот с телефоном, кивает'
   prompts:
     kling: The cat holds the phone, nods, rolls its eyes playfully, gestures with the other paw, ears stay folded,
@@ -110,25 +132,42 @@ scenes:
       y: 1070
       image: telegram
     transition: zoomin
-  subtitle: Четвёртое — Telegram Ads.
 - id: s05
   type: character_motion
   duration: 5.0
   generator: kling
   reference: fit_phone_mat
-  voiceover: В городах на двести–пятьсот тысяч работает, если есть районные сообщества.
+  voiceover: Для небольших городов от двухсот до пятисот тысяч жителей может работать очень неплохо —
+  subtitle: Для небольших городов от 200 до 500 тысяч жителей может работать очень неплохо —
   visual: '[студия] Кот на коврике смотрит смартфон'
   prompts:
     kling: The cat lies on the yoga mat and scrolls the smartphone with its paw, looks at the screen, blinks, soft
       warm lights, ears stay folded, static camera
-  subtitle: В городах на 200–500 тысяч работает, если есть районные сообщества.
   local:
     transition: smoothleft
     overlays:
     - style: note
-      text: "200–500 тыс.\n+ районные сообщества"
-      accent: районные сообщества
-      at: городах
+      text: "Города 200–500 тыс."
+      accent: 200–500
+      at: городов
+      size: 48
+      y: 1080
+- id: s05b
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: fit_flipchart_hammocks
+  voiceover: особенно если есть живые городские и районные сообщества.
+  visual: '[студия] Кот у флипчарта под подвесами'
+  prompts:
+    kling: The cat points at the funnel on the flipchart with a pointer and nods confidently, the aerial yoga
+      hammocks sway slightly in the background, ears stay folded, static camera
+  local:
+    overlays:
+    - style: note
+      text: "+ живые районные сообщества"
+      accent: сообщества
+      at: живые
       size: 48
       y: 1080
 - id: s06
@@ -136,7 +175,8 @@ scenes:
   duration: 4.2
   generator: kling
   reference: pointing_chart
-  voiceover: 'Третье — ВэКа Эдс: точная география по городам и районам.'
+  voiceover: Третье — ВэКа Эдс. Отличный инструмент для небольших городов
+  subtitle: Третье — VK Ads. Отличный инструмент для небольших городов
   visual: '[офис] Кот объясняет у доски'
   prompts:
     kling: The cat points at the chart on the board with its paw, then turns its head to the camera, small gesture
@@ -151,13 +191,42 @@ scenes:
       y: 1070
       image: vk_ads
     transition: zoomin
-  subtitle: 'Третье — VK Ads: точная география по городам и районам.'
+- id: s06b
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: fit_walk_away
+  voiceover: и отдельных районов в крупных городах — по типу Москвы и Питера.
+  visual: '[студия] Кот уходит от камеры под подвесами'
+  prompts:
+    kling: The cat walks away from the camera under the aerial yoga hammocks, tail sways, the hammocks sway gently,
+      ears stay folded, static camera
+- id: s06c
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: fit_flipchart_logo
+  voiceover: Можно точно работать по географии — например, задать локацию один–два километра от локации студии.
+  subtitle: Можно точно работать по географии — например, задать локацию 1–2 км от локации студии.
+  visual: '[студия] Кот у флипчарта с указкой, логотип на фоне'
+  prompts:
+    kling: The cat taps the flipchart with the pointer, then looks at the camera and nods, warm studio lights glow
+      softly, ears stay folded, static camera
+  local:
+    overlays:
+    - style: note
+      text: "Гео: 1–2 км от студии"
+      accent: 1–2 км
+      at: например
+      size: 52
+      y: 1080
 - id: s07
   type: character_motion
   duration: 4
   generator: higgsfield
   reference: fit_walk_neon
-  voiceover: И ВэКа часто остаётся доступным, когда проблемы со связью.
+  voiceover: А ещё ВэКа часто остаётся доступным, когда начинаются проблемы со связью.
+  subtitle: А ещё VK часто остаётся доступным, когда начинаются проблемы со связью.
   visual: '[студия] Кот идёт к камере, синие арки и зеркала'
   prompts:
     higgsfield: The cat walks toward the camera between glowing blue arches, tail sways, mirror reflections stay
@@ -171,16 +240,15 @@ scenes:
     - style: note
       text: "VK — стабильный\nлокальный канал"
       accent: стабильный
-      at: 0.3
+      at: часто
       size: 48
       y: 1080
-  subtitle: И VK часто остаётся доступным, когда проблемы со связью.
 - id: s08
   type: character_motion
   duration: 4.6
   generator: kling
   reference: detective_magnifier
-  voiceover: Второе — Яндекс Карты и геосервисы. Для локальной студии это маст-хэв.
+  voiceover: Второе место — Яндекс Карты и вообще любые геосервисы. Для локальной фитнес-студии это маст-хэв.
   visual: '[офис] Кот с лупой анализирует экран'
   prompts:
     kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
@@ -197,23 +265,42 @@ scenes:
     transition: zoomin
 - id: s09
   type: talking
-  duration: 5.8
+  duration: 4.5
   generator: kling
   reference: fit_logo_mat
-  voiceover: Карточка, отзывы, фото и акции могут привести первых клиентов уже в первый месяц.
-  visual: '[студия] Кот у логотипа студии'
+  voiceover: Визуально оформленная карточка, отзывы, фотографии, акции и платное продвижение
+  visual: '[студия] Кот у логотипа студии говорит в камеру'
   prompts:
     kling: The cat talks to the camera calmly and confidently, small nods, blinks naturally, small head turns, calm
       breathing, whiskers twitch slightly, warm studio lights glow softly, ears stay folded, static camera
   local:
     mode: pro
     transition: smoothleft
+    overlays:
+    - style: note
+      text: "Карточка · отзывы · фото\nакции · продвижение"
+      accent: карточка
+      at: 0.3
+      size: 46
+      y: 1120
+- id: s09b
+  type: talking
+  duration: 4
+  generator: kling
+  reference: desk_front
+  voiceover: могут привести новых клиентов уже в первый месяц!
+  visual: '[офис] Кот за ноутбуком говорит в камеру'
+  prompts:
+    kling: The cat talks to the camera with a confident, slightly excited look, small nods, blinks naturally, small
+      head turns, calm breathing, whiskers twitch slightly, monitors glow softly, ears stay folded, static camera
+  local:
+    mode: pro
 - id: s10
   type: character_motion
   duration: 3.3
   generator: kling
   reference: coffee_guru
-  voiceover: А первое место… Все ждут секретный инструмент.
+  voiceover: Ну а первое место… Тут все ждут какой-то секретный рекламный инструмент.
   visual: '[офис] Кот спокойно пьёт кофе'
   prompts:
     kling: The cat calmly holds the coffee cup, steam rises, it blinks slowly and gives a knowing look to the camera,
@@ -225,8 +312,8 @@ scenes:
   duration: 2.1
   generator: kling
   reference: fit_point_arches
-  voiceover: Но нет — это эс-эм-эм.
-  subtitle: Но нет — это SMM.
+  voiceover: Но нет… Это эс-эм-эм и соцсети.
+  subtitle: Но нет… Это SMM и соцсети.
   visual: '[студия] Кот резко тянет лапу к зрителю — кульминация №1'
   prompts:
     kling: The cat thrusts its paw toward the camera with a confident, slightly smug look, blinks naturally, small
@@ -238,25 +325,22 @@ scenes:
     - style: rank
       rank: 1
       roll_from: 2
-      text: SMM
-      size: 60
+      text: SMM и соцсети
+      size: 58
       at: эсэмэм
       y: 1070
     ambient:
       zoom: 0.12
-- id: s11
+- id: s10c
   type: character_motion
-  duration: 3
-  generator: higgsfield
-  reference: fit_walk_hammocks
-  voiceover: Запретграмм, ВэКа, Телеграм-канал и Макс.
-  visual: '[студия] Кот идёт под подвесами — по очереди названия соцсетей'
+  duration: 5
+  generator: kling
+  reference: fit_walk_away_look
+  voiceover: Снимайте крутой контент и качайте Запретграмм,
+  visual: '[студия] Кот уходит и оглядывается в камеру — «снимайте контент»'
   prompts:
-    higgsfield: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail
-      moves naturally, ears stay folded, static camera
-    kling: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail moves
-      naturally, ears stay folded, static camera
-  subtitle: Запретграмм, VK, Telegram-канал и MAX.
+    kling: The cat walks away, then looks back over its shoulder at the camera with a playful look, the neon arches
+      glow steadily, ears stay folded, static camera
   local:
     overlays:
     - style: icons
@@ -265,6 +349,24 @@ scenes:
       - image: instagram
         label: Запретграмм
         at: запретграмм
+- id: s11
+  type: character_motion
+  duration: 3
+  generator: higgsfield
+  reference: fit_walk_hammocks
+  voiceover: развивайте ВэКа-сообщество, Телеграм-канал и не забывайте про Макс!
+  subtitle: развивайте VK-сообщество, Telegram-канал и не забывайте про MAX!
+  visual: '[студия] Кот идёт под подвесами — по очереди названия соцсетей'
+  prompts:
+    higgsfield: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail
+      moves naturally, ears stay folded, static camera
+    kling: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail moves
+      naturally, ears stay folded, static camera
+  local:
+    overlays:
+    - style: icons
+      y: 1020
+      items:
       - image: vk
         label: VK
         at: вэка
@@ -288,7 +390,7 @@ scenes:
   duration: 5.0
   generator: higgsfield
   reference: fit_walk_low
-  voiceover: В фитнесе покупают тренера, атмосферу и желание быть частью этого места.
+  voiceover: Потому что в фитнесе покупают не только тренировку.
   visual: '[студия] Кот крадётся к камере, арки'
   prompts:
     higgsfield: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow
@@ -299,14 +401,28 @@ scenes:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
     ambient:
-      zoom: 0.12
+      zoom: 0.08
+- id: s13b
+  type: talking
+  duration: 5
+  generator: kling
+  reference: fit_logo
+  voiceover: Покупают тренера, атмосферу, доверие и желание быть частью этого места.
+  visual: '[студия] Кот у логотипа говорит в камеру — кульминация'
+  prompts:
+    kling: The cat talks to the camera with warm conviction, slow nods, blinks naturally, small head turns, calm
+      breathing, whiskers twitch slightly, warm studio lights glow softly, ears stay folded, static camera
+  local:
+    mode: pro
+    ambient:
+      zoom: 0.1
     overlays:   # кульминация
     - style: note
-      text: "Покупают не абонемент,\nа атмосферу"
-      accent: атмосферу
-      at: покупают
+      text: "Покупают атмосферу\nи доверие"
+      accent: атмосферу доверие
+      at: атмосферу
       size: 56
-      y: 1060
+      y: 1120
 - id: s14
   type: talking
   duration: 3.3
