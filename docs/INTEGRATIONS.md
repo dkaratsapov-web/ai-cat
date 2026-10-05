@@ -88,3 +88,35 @@
 3. **Дрейф внешности.** Каждая AI-сцена генерируется от утверждённого фото, а не только по тексту. Якорь внешности и
    negative prompt добавляются автоматически. Финальная проверка — только глазами.
 4. **Цены и API меняются.** Тарифы вынесены в `config/pricing.yaml`, адаптеры изолированы.
+
+## Higgsfield (исследование, 2026-10-05; адаптер ещё не подключён)
+
+Проверено по официальному Python SDK `higgsfield-client` 0.2.0 (PyPI, автор Higgsfield, репозиторий
+github.com/higgsfield-ai/higgsfield-client) и официальному JS SDK github.com/higgsfield-ai/higgsfield-js.
+Сайт и docs.higgsfield.ai из облачной среды недоступны — параметры моделей ниже взяты из поисковой выдачи
+по open.higgsfield.ai и должны быть сверены с документацией перед подключением.
+
+**Протокол (из кода SDK — проверено):**
+- База: `https://api.higgsfield.ai`. Авторизация: заголовок `Authorization: Key <API_KEY>:<API_SECRET>`
+  (в SDK — переменные `HF_KEY` или `HF_API_KEY` + `HF_API_SECRET`; ключи — в cloud.higgsfield.ai).
+- Запуск: `POST /<модель>` с JSON-аргументами → `{request_id, status_url, cancel_url}`.
+  Вебхук — параметр `?hf_webhook=<url>`.
+- Статус и результат: `GET /requests/<id>/status` → `status`: queued | in_progress | completed | failed | nsfw | canceled;
+  при completed — `video.url` / `images[].url`. По failed и nsfw кредиты возвращаются (README JS SDK).
+- Отмена: `POST /requests/<id>/cancel` (только пока queued).
+- Загрузка своих файлов: `POST /files/generate-upload-url` `{content_type}` → `{public_url, upload_url, upload_headers}`,
+  затем PUT байтов на `upload_url`; в генерацию передаётся `public_url`.
+
+**Модели (по выдаче — сверить):**
+- `bytedance/seedance-2.5/image-to-video`: `image_url` (обяз.), `prompt`, `duration` 4–30 с (по умолч. 5),
+  `resolution` 480p | 720p | 1080p, `end_image_url`, `output_format` mp4|mov, `generate_audio` (по умолч. **true** —
+  нам ставить false: озвучка своя, а звук, по обзорам, удорожает).
+- Seedance 2.0, Kling 3.0, Wan — доступны по обзорам; точные id не проверены.
+- Собственные: `/v1/image2video/dop` (DoP, `model`, `prompt`, `input_images`, `motions`);
+  `/v1/speak/higgsfield` (Speak v2: `input_image` + `input_audio` только WAV, `quality`, `duration`) —
+  говорящее видео по фото и аудио. **Работает ли на коте (не человеке) — неизвестно, нужен тест.**
+
+**Деньги и права (по обзорам):** API — отдельный кошелёк в USD, пополнение от $5, без подписки, оплата за генерацию;
+подписка на сайте и API — разные продукты. Ориентиры цены: Seedance 2.5 ≈ $0.21/с, Seedance 2.0 ≈ $0.14/с,
+Kling 3.0 ≈ $0.084/с, Wan 3.0 ≈ $0.05/с. По условиям использования права на результат у пользователя,
+коммерческое использование не ограничено (проверить актуальные Terms).
