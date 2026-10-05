@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -185,6 +186,15 @@ def estimate(project: Project, jobs: list[PlannedJob], db: DB) -> Estimate:
     return est
 
 
+DEFERRED = "deferred"
+_LIMIT_RE = re.compile(r"\b(1302|1303)\b|parallel task|HTTP 429|rate limit|too many requests", re.I)
+
+
+def is_limit_error(text: str | None) -> bool:
+    """Отказ из-за лимита одновременных задач / частоты запросов: задача не создана, деньги не списаны."""
+    return bool(text and _LIMIT_RE.search(text))
+
+
 class Runner:
     def __init__(self, project: Project, db: DB):
         self.p = project
@@ -218,7 +228,7 @@ class Runner:
             if ex and j.scene.id not in regenerate:
                 self._ensure_local(ex, j.scene.id)
                 continue
-            failed = [r for r in self.db.find_by_key(j.key) if r["status"] == "failed"]
+            failed = [r for r in self.db.find_by_key(j.key) if r["status"] == "failed" and not is_limit_error(r.get("error"))]
             if failed and j.scene.id not in regenerate:
                 print(f"{j.scene.id}: прошлая попытка завершилась ошибкой ({failed[-1]['error']}). "
                       f"Повтор только явно: --regenerate {j.scene.id}")
@@ -246,12 +256,28 @@ class Runner:
                     print("Отменено. Ничего не отправлено.")
                     return []
 
-        submitted = []
+        submitted, deferred = [], []
         for j in to_submit:
+            if deferred and deferred[-1].provider == j.provider:
+                deferred.append(j)   # лимит этого сервиса уже исчерпан — не дёргаем его зря
+                continue
             try:
-                submitted.append(self._submit(j, pricing))
+                r = self._submit(j, pricing)
             except GenerationError as e:
                 print(f"{j.scene.id}: {redact(str(e))}")
+                continue
+            if r == DEFERRED:
+                deferred.append(j)
+            elif r:
+                submitted.append(r)
+        if deferred:
+            ids = ", ".join(j.scene.id for j in deferred)
+            print(f"В очереди: {ids} — у сервиса лимит одновременных задач. Отправлю, когда освободятся места "
+                  "(деньги за отказ не списываются).")
+            if wait:
+                submitted += self._drain_queue(deferred, pricing, submitted + reused)
+            else:
+                print(f"Запустите позже ещё раз: studio generate {self.p.id} --yes")
         all_jobs = [r for r in reused + submitted if r]
         if wait:
             self.wait([r["id"] for r in all_jobs])
@@ -273,6 +299,34 @@ class Runner:
             if job["status"] == "succeeded" and download and not self._result_file(job).exists():
                 self._download(job)
         return out
+
+    def _drain_queue(self, queue: list, pricing: dict, running: list) -> list[dict]:
+        """Ждёт свободных мест у сервиса и отправляет отложенные сцены по одной."""
+        interval = int(self.s.get("generation.poll_interval_sec", 10))
+        deadline = time.time() + int(self.s.get("generation.poll_timeout_sec", 1800))
+        active = [r["id"] for r in running if r]
+        sent: list[dict] = []
+        while queue and time.time() < deadline:
+            time.sleep(interval)
+            for jid in list(active):   # опрашиваем идущие задачи — так узнаём, что место освободилось
+                job = self.db.get_job(jid)
+                if job and job["status"] in ACTIVE_STATUSES and job["status"] != "unknown":
+                    job = self._poll_once(job)
+                if not job or job["status"] not in ACTIVE_STATUSES:
+                    active.remove(jid)
+                    if job:
+                        print(f"  {job['scene_id']}: {job['status']}")
+            while queue:
+                r = self._submit(queue[0], pricing)
+                if r == DEFERRED:
+                    break   # места ещё нет — ждём следующего круга
+                queue.pop(0)
+                if r:
+                    sent.append(r)
+                    active.append(r["id"])
+        if queue:
+            print(f"Не успели отправить: {', '.join(j.scene.id for j in queue)}. Запустите ещё раз: studio generate {self.p.id} --yes")
+        return sent
 
     def wait(self, job_ids: list[str]) -> None:
         interval = int(self.s.get("generation.poll_interval_sec", 10))
@@ -329,6 +383,9 @@ class Runner:
             return self.db.get_job(job_id)
         except ProviderError as e:
             # Сервер явно отказал — задача не создана, деньги не списаны
+            if is_limit_error(str(e)) or e.status == 429:
+                self.db.update_job(job_id, status="cancelled", error=f"отложено (лимит задач): {e}", paid=0)
+                return DEFERRED  # type: ignore[return-value]
             self.db.update_job(job_id, status="failed", error=str(e), paid=0)
             print(f"{j.scene.id}: отказ {j.provider}: {redact(str(e))}")
             return None

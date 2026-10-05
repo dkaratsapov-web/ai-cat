@@ -535,3 +535,12 @@ def test_higgsfield_adapter_protocol(tmp_path, monkeypatch):
     assert safe is False   # платный запрос не повторяется вслепую
     st = p.poll("r1", "image2video")
     assert st.status == "succeeded" and st.video_url == "https://cdn/v.mp4"
+
+
+def test_limit_errors_do_not_block_retry():
+    """Отказ из-за лимита одновременных задач (Kling 1303 / HTTP 429) — не ошибка сцены: повтор не блокируется."""
+    from studio.generation.runner import is_limit_error
+    assert is_limit_error("HTTP 429: {'code': 1303, 'message': 'parallel task over resource pack limit'}")
+    assert is_limit_error("отложено (лимит задач): HTTP 429")
+    assert not is_limit_error("HTTP 400: {'code': 1201, 'message': 'The model did not detect a human'}")
+    assert not is_limit_error(None)
