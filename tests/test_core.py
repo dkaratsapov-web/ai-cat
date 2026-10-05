@@ -110,8 +110,16 @@ def test_budget_limits(settings, tmp_path):
 def test_subtitle_chunks_and_alignment():
     words = "Директ сливает бюджет? Три причины — за тридцать секунд.".split()
     groups = chunk_words(words, 3, 24)
-    assert all(len(g) <= 3 for g in groups)
+    assert all(sum(words[i] != "—" for i in g) <= 3 for g in groups)   # тире словом не считается
     assert groups[0][-1] == 2  # разрыв после вопроса
+    # одно слово на долю секунды («геосервисы» за 0.17 с) склеивается с соседней фразой
+    t = "Второе — Яндекс Карты и геосервисы. Для студии это важно."
+    ws, tt = [], 0.0
+    for w in t.split():
+        dd = 0.17 if w == "геосервисы." else 0.3
+        ws.append([w, tt, tt + dd]); tt += dd
+    cs = scene_cues("s08", t, 0, {"text": t, "words": ws, "duration": tt}, tt, 5, 26)
+    assert all(c.end - c.start >= 0.7 for c in cs) and "Карты и геосервисы." in cs[0].text
     al = {"characters": list("да нет"), "character_start_times_seconds": [0, .1, .2, .3, .4, .5],
           "character_end_times_seconds": [.1, .2, .3, .4, .5, .6]}
     assert words_from_alignment(al) == [("да", 0, .2), ("нет", .3, .6)]
