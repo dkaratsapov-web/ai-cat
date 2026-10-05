@@ -581,3 +581,13 @@ def test_director_brief_locks_and_final_gate(settings, tmp_path):
     assert body["text"]["format"]["type"] == "json_schema" and body["input"][0]["content"][0]["type"] == "input_text"
     data = _json.loads(output_text(MockDirector({}).send(body)))
     assert data["scene_id"] == "s01" and data["status"] in ("approved", "revise")
+
+
+def test_director_ping_without_key(settings, monkeypatch, capsys):
+    from studio import cli
+    shutil.copytree(ROOT / "director_bridge/config", settings.root / "director_bridge/config")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr("studio.director.openai_client.secret", lambda name: None)
+    rc = cli._director_ping(type("A", (), {"yes": True})(), settings)
+    assert rc == 1
+    assert "OPENAI_API_KEY" in capsys.readouterr().out

@@ -589,6 +589,10 @@ def cmd_review_pack(a, s):
 def cmd_director(a, s):
     from .director import bridge as br
     from .director import state
+    if a.action == "ping":
+        return _director_ping(a, s)
+    if not a.episode:
+        raise ProjectError(f"Укажите эпизод: studio director {a.action} <эпизод>")
     proj = open_project(a.episode, s)
     db = _db(s)
     mode = "mock" if a.mock else ("manual" if a.manual else "openai")
@@ -623,6 +627,39 @@ def cmd_director(a, s):
     if data:
         print(f"Директор: {data.get('status')}" + (f", оценка {data['final_score']}" if "final_score" in data else ""))
         print(f"  Ответ: {proj.path / 'director' / 'latest_review.md'}")
+    return 0
+
+
+def _director_ping(a, s):
+    """Проверка связи с OpenAI: 1) бесплатно — ключ и доступ к модели; 2) после «да» — один крошечный запрос."""
+    from .director.bridge import load_config
+    from .director.openai_client import DirectorUnavailable, OpenAIDirector
+    cfg = load_config(s)
+    od = OpenAIDirector(cfg)
+    try:
+        models = od.list_models()
+    except DirectorUnavailable as e:
+        print(f"✗ {e}\n  Без OpenAI работает ручной режим: --manual")
+        return 1
+    print(f"✓ Ключ принят, проекту доступно моделей: {len(models)}")
+    gpt = [m for m in models if m.startswith(("gpt-5", "gpt-4.1", "gpt-4o", "o3", "o4"))]
+    print("  Подходящие: " + (", ".join(gpt[:15]) or "—"))
+    if cfg["model"] not in models:
+        print(f"✗ Модель из director_bridge/config/bridge.yaml ({cfg['model']}) проекту недоступна — "
+              f"впишите одну из подходящих в поле model")
+        return 1
+    print(f"✓ Модель {cfg['model']} доступна")
+    if not a.yes:
+        ok = input("Отправить один тестовый запрос в Responses API (десятки токенов, доли цента)? [да/нет]: ")
+        if ok.strip().lower() not in ("да", "y", "yes", "д"):
+            print("Бесплатная часть проверки пройдена. Тестовый запрос не отправлен.")
+            return 0
+    try:
+        r = od.ping()
+    except DirectorUnavailable as e:
+        print(f"✗ {e}")
+        return 1
+    print(f"✓ Responses API отвечает: {r['text'][:200]}\n  модель: {r['model']}, токены: {r['usage']}")
     return 0
 
 
@@ -837,9 +874,10 @@ def build_parser() -> argparse.ArgumentParser:
     asp.add_argument("--export", action="store_true", help="записать assets/approved/index.yaml")
     asp.set_defaults(fn=cmd_assets)
 
-    dr = sub.add_parser("director", help="Director Bridge (OpenAI): review | review-scene | review-final | sync | status | export-review-package")
-    dr.add_argument("action", choices=["review", "review-scene", "review-final", "sync", "status", "export-review-package"])
-    dr.add_argument("episode")
+    dr = sub.add_parser("director", help="Director Bridge (OpenAI): ping | review | review-scene | review-final | sync | status | export-review-package")
+    dr.add_argument("action", choices=["ping", "review", "review-scene", "review-final", "sync", "status",
+                                       "export-review-package"])
+    dr.add_argument("episode", nargs="?")
     dr.add_argument("scene", nargs="?")
     dr.add_argument("--mock", action="store_true", help="dry-run: ответ-заглушка, без OpenAI и без денег")
     dr.add_argument("--manual", action="store_true", help="только пакет для ручного ревью в ChatGPT")

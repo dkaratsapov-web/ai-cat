@@ -33,6 +33,7 @@ Kling и Higgsfield — только генераторы. Claude не меня�
 | Применить | `studio review apply <ep> s04 [--approve] [--override]` | показывает правку промпта; платная перегенерация — только отдельной командой со сметой |
 | Финал | `studio director review-final <ep>` | пакет: preview.mp4, contact_sheet.jpg, scene_map.json, subtitles.srt, script.txt, director_brief.yaml, costs.csv |
 | Без OpenAI | `--manual` / нет ключа | `MANUAL.md` + пакет для ручной вставки в ChatGPT; ответ — `studio review import <ep> <target> --file answer.json` |
+| Связь | `studio director ping` | бесплатно: ключ и модель; после «да» — один крошечный запрос |
 | Прочее | `studio director status\|sync\|export-review-package`, `studio scene-status`, `studio assets --export`, `studio costs --csv` | |
 
 Статусы: `draft → approved → generating → generated → review → (revise | manual_review) → final`.

@@ -83,6 +83,36 @@ class OpenAIDirector:
         return resp
 
 
+    def _base(self) -> str:
+        ep = self.cfg.get("endpoint", "https://api.openai.com/v1/responses")
+        return ep.rsplit("/responses", 1)[0]
+
+    def list_models(self) -> list[str]:
+        """Бесплатно: GET /v1/models — проверяет ключ и показывает доступные проекту модели."""
+        key = secret("OPENAI_API_KEY")
+        if not key:
+            raise DirectorUnavailable("нет OPENAI_API_KEY в .env")
+        try:
+            r = requests.get(f"{self._base()}/models", headers={"Authorization": f"Bearer {key}"},
+                             timeout=30, allow_redirects=False)
+        except requests.RequestException as e:
+            raise DirectorUnavailable(f"OpenAI недоступен: {redact(str(e))}") from e
+        if r.status_code >= 400:
+            raise DirectorUnavailable(f"OpenAI HTTP {r.status_code}: {redact(r.text[:400])}")
+        return sorted(m.get("id", "") for m in r.json().get("data") or [])
+
+    def ping(self) -> dict:
+        """Минимальный платный запрос (десятки токенов): Responses API + JSON-схема отвечают."""
+        schema = {"type": "object", "properties": {"ok": {"type": "boolean"}, "reply": {"type": "string"}},
+                  "required": ["ok", "reply"], "additionalProperties": False}
+        body = {"model": self.cfg["model"], "instructions": "Ты — проверка связи. Ответь кратко.",
+                "input": [{"role": "user", "content": [{"type": "input_text", "text": "Ответь ok=true и reply='на связи'."}]}],
+                "store": False, "max_output_tokens": 400,
+                "text": {"format": {"type": "json_schema", "name": "ping", "schema": schema, "strict": True}}}
+        resp = self.send(body)
+        return {"id": resp.get("id"), "model": resp.get("model"), "text": output_text(resp), "usage": resp.get("usage")}
+
+
 class MockDirector:
     """Dry-run: правдоподобный ответ по схеме без обращения к OpenAI (никаких денег, никакой сети)."""
 

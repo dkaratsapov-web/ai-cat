@@ -28,12 +28,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
+def load_config(settings) -> dict:
+    return yaml.safe_load((settings.root / "director_bridge" / "config" / "bridge.yaml").read_text(encoding="utf-8"))
+
+
 class Bridge:
     def __init__(self, project: Project, db: DB, *, mode: str = "openai"):
         """mode: openai | mock (dry-run) | manual (только пакет, без обращения к API)."""
         self.p, self.db, self.mode = project, db, mode
         self.root = project.settings.root / "director_bridge"
-        self.cfg = yaml.safe_load((self.root / "config" / "bridge.yaml").read_text(encoding="utf-8"))
+        self.cfg = load_config(project.settings)
         self.client = MockDirector(self.cfg) if mode == "mock" else OpenAIDirector(self.cfg)
 
     # ---------------------------------------------------------------- контекст
