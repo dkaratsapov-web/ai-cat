@@ -284,6 +284,26 @@ class Runner:
         all_jobs = [r for r in reused + submitted if r]
         if wait:
             self.wait([r["id"] for r in all_jobs])
+            # Сервис принял задачу, а потом отказал из-за лимита одновременных задач (Kling: «parallel task over
+            # resource pack limit»). Денег за такой отказ нет — переотправляем сами, когда остальные завершились.
+            by_key = {j.key: j for j in to_submit}
+            for _round in range(3):
+                retry = [by_key[r["idempotency_key"]] for r in (self.db.get_job(x["id"]) for x in submitted if x)
+                         if r and r["status"] == "failed" and is_limit_error(r.get("error"))
+                         and r["idempotency_key"] in by_key]
+                if not retry:
+                    break
+                print(f"Переотправляю после отказа по лимиту: {', '.join(j.scene.id for j in retry)} (без доплаты за отказ)")
+                again: list[dict] = []
+                for j in retry:
+                    r = self._submit(j, pricing)
+                    if r and r != DEFERRED:
+                        again.append(r)
+                    elif r == DEFERRED:
+                        again += self._drain_queue([j], pricing, [])
+                submitted += again
+                all_jobs += again
+                self.wait([r["id"] for r in again])
         self._update_project_status(script)
         return [self.db.get_job(r["id"]) for r in all_jobs]  # type: ignore[misc]
 
