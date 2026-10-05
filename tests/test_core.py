@@ -39,7 +39,8 @@ def test_templates_valid():
     for p in (ROOT / "assets/templates/scripts").glob("*.yaml"):
         s = Script.load(p)
         s.validate()
-        assert 20 <= s.planned_duration <= 60, p.name
+        # длиннее 60 с — только осознанное решение владельца, записанное в target_duration сценария
+        assert 20 <= s.planned_duration <= max(60, s.target_duration + 5), p.name
 
 
 def test_script_rejects_unknown_fields():
