@@ -680,8 +680,18 @@ def _director_ping(a, s):
     except DirectorUnavailable as e:
         print(f"✗ {e}")
         return 1
-    print(f"✓ Responses API отвечает: {r['text'][:200]}\n  модель: {r['model']}, токены: {r['usage']}")
-    return 0
+    print(f"1. HTTP/API status: {r['http_status']}" + (f" / {r['api_status']}" if r.get("api_status") else ""))
+    if r.get("error_code") or r["http_status"] >= 400:
+        print(f"   Ошибка: {r.get('error_code')} — {r.get('error')}")
+        print(f"4. request id: {r.get('request_id') or '—'}")
+        return 1
+    print(f"2. model used: {r.get('model')}")
+    print(f"3. returned text: {r.get('text')!r}")
+    print(f"4. request id: {r.get('request_id') or '—'} (response id: {r.get('response_id')})")
+    u = r.get("usage") or {}
+    print(f"5. usage: input {u.get('input_tokens')}, output {u.get('output_tokens')}, total {u.get('total_tokens')} токенов "
+          "(стоимость API не возвращает — смотрите Usage в кабинете OpenAI)")
+    return 0 if (r.get("text") or "").strip() == "OPENAI_OK" else 1
 
 
 def cmd_assets(a, s):

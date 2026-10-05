@@ -102,15 +102,30 @@ class OpenAIDirector:
         return sorted(m.get("id", "") for m in r.json().get("data") or [])
 
     def ping(self) -> dict:
-        """Минимальный платный запрос (десятки токенов): Responses API + JSON-схема отвечают."""
-        schema = {"type": "object", "properties": {"ok": {"type": "boolean"}, "reply": {"type": "string"}},
-                  "required": ["ok", "reply"], "additionalProperties": False}
-        body = {"model": self.cfg["model"], "instructions": "Ты — проверка связи. Ответь кратко.",
-                "input": [{"role": "user", "content": [{"type": "input_text", "text": "Ответь ok=true и reply='на связи'."}]}],
-                "store": False, "max_output_tokens": 400,
-                "text": {"format": {"type": "json_schema", "name": "ping", "schema": schema, "strict": True}}}
-        resp = self.send(body)
-        return {"id": resp.get("id"), "model": resp.get("model"), "text": output_text(resp), "usage": resp.get("usage")}
+        """Тестовый запрос в Responses API: «Return exactly: OPENAI_OK». Ключ не печатается и не логируется."""
+        key = secret("OPENAI_API_KEY")
+        if not key:
+            raise DirectorUnavailable("нет OPENAI_API_KEY в .env")
+        body = {"model": self.cfg["model"], "input": "Return exactly: OPENAI_OK", "store": False,
+                "max_output_tokens": 1000}
+        try:
+            r = requests.post(self.cfg.get("endpoint", "https://api.openai.com/v1/responses"), json=body,
+                              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                              timeout=int(self.cfg.get("timeout_sec", 120)), allow_redirects=False)
+        except requests.RequestException as e:
+            raise DirectorUnavailable(f"сеть: {type(e).__name__}: {redact(str(e))[:300]}") from e
+        out = {"http_status": r.status_code, "request_id": r.headers.get("x-request-id")}
+        try:
+            j = r.json()
+        except ValueError:
+            j = {}
+        if r.status_code >= 400:
+            err = j.get("error") or {}
+            out.update(error_code=err.get("code") or err.get("type"), error=redact(str(err.get("message") or r.text[:300])))
+            return out
+        out.update(api_status=j.get("status"), response_id=j.get("id"), model=j.get("model"),
+                   text=output_text(j), usage=j.get("usage"))
+        return out
 
 
 class MockDirector:
