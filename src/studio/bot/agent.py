@@ -26,6 +26,9 @@ FREE_COMMANDS = {            # первое слово (или пара слов
     ("templates",), ("pipeline",), ("brief", "check"), ("review-pack",), ("director", "export-review-package"),
 }
 PAID_COMMANDS = {"generate", "voice"}
+READONLY_COMMANDS = {("script", "show"), ("status",), ("scene-status",), ("costs",), ("history",),
+                     ("director", "status"), ("assets",), ("character", "list"), ("templates",)}
+ADVISOR_TOOLS = {"studio", "read_file", "kb_search", "kb_catalog", "view_image"}
 WRITABLE = ("script/script.yaml", "director/director_notes.md")
 SECRET_NAMES = (".env",)
 
@@ -100,14 +103,30 @@ class Host:
     notify: Callable[[str], None]
 
 
+CANCEL = __import__("threading").Event()   # «стоп» владельца: прерывает команды и шаги агентов
+
+
+class Cancelled(RuntimeError):
+    pass
+
+
 def run_studio(root: Path, args: list[str], timeout: int = 1800) -> tuple[int, str]:
+    import tempfile
+    import time
     env = dict(os.environ, PYTHONIOENCODING="utf-8", STUDIO_ROOT=str(root))
-    try:
-        r = subprocess.run([sys.executable, "-m", "studio.cli", *args], cwd=root, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=timeout, env=env, stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        return 124, f"Команда не уложилась в {timeout // 60} мин"
-    return r.returncode, redact((r.stdout + ("\n" + r.stderr if r.stderr.strip() else "")).strip())
+    with tempfile.TemporaryFile("w+", encoding="utf-8", errors="replace") as out:
+        proc = subprocess.Popen([sys.executable, "-m", "studio.cli", *args], cwd=root, stdout=out,
+                                stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", env=env,
+                                stdin=subprocess.DEVNULL)
+        start = time.time()
+        while proc.poll() is None:
+            if CANCEL.is_set() or time.time() - start > timeout:
+                proc.kill()
+                proc.wait()
+                return 130, "Остановлено владельцем" if CANCEL.is_set() else f"Команда не уложилась в {timeout // 60} мин"
+            time.sleep(0.3)
+        out.seek(0)
+        return proc.returncode, redact(out.read().strip())
 
 
 def _inside(root: Path, rel: str) -> Path:
@@ -135,9 +154,12 @@ def check_free(args: list[str]) -> str | None:
 
 
 class Producer:
-    def __init__(self, settings: Settings, cfg: dict, host: Host, store: Path):
+    def __init__(self, settings: Settings, cfg: dict, host: Host, store: Path, *, advisor: bool = False):
+        """advisor=True — режим «поговорить и посоветовать»: только чтение (база знаний, файлы, статусы),
+        ничего не меняет и не запускает сборку. Отдельная история — работает параллельно с задачами."""
         import anthropic   # pip install -e ".[bot]"
-        self.s, self.cfg, self.host = settings, cfg, host
+        self.s, self.cfg, self.host, self.advisor = settings, cfg, host, advisor
+        self.tools = [t for t in TOOLS if t["name"] in ADVISOR_TOOLS] if advisor else TOOLS
         self.root = settings.root
         self.client = anthropic.Anthropic()   # ключ — ANTHROPIC_API_KEY из окружения/.env
         self.store = store
@@ -153,7 +175,11 @@ class Producer:
                 "Правила денег: платное (generate, voice) — только через request_paid, никогда не обещай, что запустил "
                 "платное сам. Не выдумывай факты и цены. Внешность кота и губы проверяет только владелец глазами.\n"
                 "Директор (GPT) — советник: его мнение учитывай, решения принимает владелец.\n"
-                "Ответы — простой текст без Markdown-таблиц (это Telegram), коротко.\n\n"
+                "Ответы — простой текст без Markdown-таблиц (это Telegram), коротко.\n"
+                + ("РЕЖИМ СОВЕТНИКА: владелец просто общается или спрашивает совета. Отвечай живо и по делу, опирайся "
+                   "на базу знаний и данные проекта. Ничего не меняй и не запускай; если нужна работа — предложи "
+                   "поставить задачу команде (написать «сделай …»). Про ход текущих задач отвечай по строке "
+                   "[сейчас в работе: …] в начале сообщения.\n" if self.advisor else "") + "\n"
                 f"=== Инструкции проекта (CLAUDE.md) ===\n{rules}")
 
     def _load(self) -> dict:
@@ -205,6 +231,8 @@ class Producer:
             if name == "studio":
                 args = [str(a) for a in inp["args"]]
                 why = check_free(args)
+                if not why and self.advisor and not any(tuple(args[:len(k)]) == k for k in READONLY_COMMANDS):
+                    why = "в режиме совета — только просмотр (status, script show, costs…); задачу поставьте команде"
                 if why:
                     return f"ОТКАЗ: {why}"
                 self.host.notify(f"⚙️ studio {' '.join(args)}")
@@ -281,7 +309,7 @@ class Producer:
         msgs.append({"role": "user", "content": text})
         p = self.cfg["producer"]
         kwargs: dict = {"model": p["model"], "max_tokens": int(p.get("max_tokens", 16000)),
-                        "system": self.state["system"], "tools": TOOLS, "messages": msgs,
+                        "system": self.state["system"], "tools": self.tools, "messages": msgs,
                         "cache_control": {"type": "ephemeral"}}
         if p.get("effort"):
             kwargs["output_config"] = {"effort": p["effort"]}
@@ -289,6 +317,9 @@ class Producer:
             kwargs.update(betas=["server-side-fallback-2026-07-01"], fallbacks="default")
         final = ""
         for _step in range(25):   # не больше 25 шагов с инструментами на одно сообщение
+            if CANCEL.is_set():
+                final = "Остановлено по вашей команде «стоп»."
+                break
             try:
                 resp = self.client.beta.messages.create(**kwargs)
             except anthropic.AuthenticationError:

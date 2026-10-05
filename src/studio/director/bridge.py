@@ -183,6 +183,7 @@ class Bridge:
             resp = self.client.send(body)
         except DirectorUnavailable as e:
             print(f"Директор недоступен: {e}")
+            self.last_error = str(e)[:300]
             return None
         answer = output_text(resp).strip()
         try:   # модель могла по привычке ответить JSON-ом — достаём текст

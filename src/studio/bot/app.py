@@ -30,10 +30,18 @@ import yaml
 from ..config import Settings, redact, secret
 from ..db import DB
 from ..project import list_projects, open_project
-from .agent import Host, Producer, run_studio
+from .agent import CANCEL, Host, Producer, run_studio
 from .telegram import Telegram, TelegramError
 
 ROLE_NAMES = {"owner": "Вы", "system": "Система"}
+# начало сообщения-задачи: глагол-действие → команде (директор смотрит → Claude делает); иначе — разговор/совет
+TASK_RE = re.compile(r"^\s*(пожалуйста[, ]+)?(сдела|проанализ|улучш|собер|собра|переде|провер|запуст|подготов|созда|"
+                     r"напиш|исправ|смонтир|сгенер|озвуч|доработ|отревь|оцени\s+(ролик|видео|сцен|эпизод)|аудит|"
+                     r"сократ|замен|добав|убер|сним|перегенер|пересобер)", re.I)
+
+
+def is_task(text: str) -> bool:
+    return bool(TASK_RE.match(text))
 
 
 def now() -> str:
@@ -80,8 +88,12 @@ class BotApp(Host):
         self.lock = threading.Lock()
         self.url = secret("MINIAPP_URL") or ""
         self.producer: Producer | None = None
+        self.adviser: Producer | None = None
         if secret("ANTHROPIC_API_KEY"):
             self.producer = Producer(settings, self.cfg, self, self.dir / "claude_history.json")
+            self.adviser = Producer(settings, self.cfg, self, self.dir / "advice_history.json", advisor=True)
+        self.advice: "queue.Queue[tuple]" = queue.Queue()
+        self.current: dict = {}
 
     # ------------------------------------------------------------ лента и состояние
     def post(self, role: str, text: str, **extra) -> None:
@@ -153,9 +165,10 @@ class BotApp(Host):
         try:
             if from_claude:
                 self.post("claude", f"→ {self.agent_label('director')}: {question}")
-            ans = self._bridge(episode).ask(question, log_question=False, audit=audit)
+            b = self._bridge(episode)
+            ans = b.ask(question, log_question=False, audit=audit)
             if not ans:
-                return "директор недоступен (проверьте OPENAI_API_KEY)"
+                return f"директор недоступен: {getattr(b, 'last_error', '') or 'проверьте OPENAI_API_KEY'}"
             self.tell("director", ans)
             return ans
         except Exception as e:   # noqa: BLE001
@@ -250,26 +263,41 @@ class BotApp(Host):
 
     def handle_text(self, text: str, to: str = "claude", via: str = "tg") -> None:
         text = text.strip()
+        if text.lower().strip("!. ") in ("стоп", "stop", "/stop", "отмена", "хватит"):
+            return self.stop()
         if text in ("/start", "/app"):
             return self.send_app_button()
         if text == "/new":
             if self.producer:
                 self.producer.reset()
-            return self.tell("system", "Начали новый разговор с Claude (старый сохранён в сводке не будет).")
-        if text.startswith("/ep"):
-            ep = text[3:].strip()
-            ids = [p.id for p in list_projects(self.s)]
+            if self.adviser:
+                self.adviser.reset()
+            return self.tell("system", "Начали новый разговор с Claude.")
+        ids = [p.id for p in list_projects(self.s)]
+        first, _, rest = text.partition("\n")
+        if first.startswith("/ep") or first.strip() in ids:
+            ep = first[3:].strip() if first.startswith("/ep") else first.strip()
             if ep in ids:
                 self.state["episode"] = ep
                 self.save_state()
-                return self.tell("system", f"Текущий эпизод: {ep}")
+                self.tell("system", f"Текущий эпизод: {ep}")
+                return self.handle_text(rest, to, via) if rest.strip() else None
             return self.tell("system", "Эпизоды:\n" + "\n".join(ids[-15:]) + "\nВыбор: /ep <id>")
+        if not text:
+            return None
         if text.startswith(("/d ", "/director ")):
             to, text = "director", text.split(" ", 1)[1]
         elif text.startswith(("/c ", "/claude ")):
             to, text = "claude", text.split(" ", 1)[1]
-        elif via == "tg" and not text.startswith("/"):
-            to = "team"           # по умолчанию: директор смотрит первым → аудит → Claude
+        elif text.startswith(("/task ", "/t ")):
+            to, text = "team", text.split(" ", 1)[1]
+        elif to == "team" or (via == "tg" and not text.startswith("/")):
+            # задача → команде (директор смотрит первым → аудит → Claude); вопрос/разговор → совет сразу
+            to = "team" if is_task(text) else "advice"
+        if to == "advice":
+            self.post("owner", text, to="advice")
+            self.advice.put(text)
+            return None
         self.post("owner", text, to=to)
         ack = {"team": f"{self.agent_label('director')} взял задачу: смотрю работу и готовлю аудит для Claude…",
                "director": f"{self.agent_label('director')}: смотрю…",
@@ -279,9 +307,58 @@ class BotApp(Host):
             self.notify(ack + (f" (в очереди: {self.jobs.qsize()})" if self.jobs.qsize() else ""))
         self.jobs.put((to, text))
 
+    def _now_line(self) -> str:
+        if not self.current:
+            return "сейчас в работе: ничего, очередь пуста"
+        mins = int((time.time() - self.current["since"]) // 60)
+        busy = [k for k, v in self.busy.items() if v]
+        return (f"сейчас в работе: «{self.current['what'][:120]}» ({self.current['kind']}), идёт {mins} мин; "
+                f"занят: {', '.join(busy) or '—'}; в очереди ещё {self.jobs.qsize()}")
+
+    def advice_worker(self) -> None:
+        """Разговор и советы — отдельно от задач: отвечает сразу, даже пока команда работает."""
+        while True:
+            text = self.advice.get()
+            if not self.current:      # не снимаем «стоп» с задачи, которая ещё прерывается
+                CANCEL.clear()
+            try:
+                low = text.lower()
+                if low.startswith(("директор", "/d")) and self.episode:
+                    ans = self._bridge(self.episode).ask(text, log_question=False)
+                    self.tell("director", ans or "директор недоступен (OPENAI_API_KEY)")
+                    continue
+                if not self.adviser:
+                    self.tell("system", "Claude не подключён: нет ANTHROPIC_API_KEY в .env")
+                    continue
+                if self.tg:
+                    self.tg.typing(self.owner)
+                ans = self.adviser.chat(f"[текущий эпизод: {self.episode or 'не выбран'}; {self._now_line()}]\n{text}")
+                self.tell("claude", ans)
+            except Exception as e:   # noqa: BLE001
+                self.tell("system", f"Ошибка: {redact(str(e))[:300]}")
+
+    def stop(self) -> None:
+        """«Стоп»: очистить очереди, прервать текущий шаг агента и запущенную команду studio."""
+        dropped = 0
+        for q in (self.jobs, self.advice):
+            while True:
+                try:
+                    q.get_nowait()
+                    dropped += 1
+                except queue.Empty:
+                    break
+        for p in self.pending.values():
+            if p["status"] == "pending":
+                p["status"] = "rejected"
+        CANCEL.set()
+        what = f"«{self.current['what'][:80]}»" if self.current else "ничего"
+        self.tell("system", f"⛔ Стоп. Прерываю: {what}; снято из очереди: {dropped}. Платное не запускается.")
+
     def worker(self) -> None:
         while True:
             kind, payload = self.jobs.get()
+            CANCEL.clear()
+            self.current = {"kind": kind, "what": str(payload), "since": time.time()}
             try:
                 if kind == "paid":
                     self._run_paid(payload)
@@ -313,6 +390,8 @@ class BotApp(Host):
                     self._claude_turn(payload)
             except Exception as e:   # noqa: BLE001
                 self.tell("system", f"Ошибка: {redact(str(e))[:300]}")
+            finally:
+                self.current = {}
 
     # ------------------------------------------------------------ Telegram
     def send_app_button(self) -> None:
@@ -481,7 +560,7 @@ class BotApp(Host):
                     return self._json({"error": "bad json"}, 400)
                 if u.path == "/api/send":
                     text, to = str(data.get("text", "")).strip(), data.get("to", "claude")
-                    if not text or to not in ("team", "claude", "director", "both"):
+                    if not text or to not in ("team", "claude", "director", "both", "advice"):
                         return self._json({"error": "пустое сообщение"}, 400)
                     app.handle_text(text, to=to, via="app")
                     return self._json({"ok": True})
@@ -499,6 +578,7 @@ class BotApp(Host):
 
     def run(self) -> None:
         threading.Thread(target=self.worker, daemon=True).start()
+        threading.Thread(target=self.advice_worker, daemon=True).start()
         threading.Thread(target=self.serve, daemon=True).start()
         self.start_tunnel()
         print(f"Бот запущен. Claude: {'да' if self.producer else 'нет ключа'} · "
