@@ -172,6 +172,8 @@ def next_episode_id(title: str, settings: Settings | None = None) -> str:
 def create_project(script: Script, settings: Settings | None = None, episode_id: str | None = None) -> Project:
     s = settings or get_settings()
     eid = episode_id or next_episode_id(script.title, s)
+    if not re.match(r"^[A-Za-z0-9_-]{1,120}$", eid):
+        raise ProjectError(f"Недопустимый id проекта: '{eid}' (только латиница, цифры, - и _)")
     path = episodes_root(s) / eid
     if path.exists():
         raise ProjectError(f"Проект {eid} уже существует")

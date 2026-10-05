@@ -1,0 +1,292 @@
+id: template
+title: ТОП-5 инструментов для продвижения фитнес-студии
+content_type: expert
+topic: 'Каналы продвижения локальной фитнес-студии: Директ, Telegram Ads, VK Ads, карты, SMM'
+idea: 'Кот «выезжает в поле»: офис (аналитика) чередуется с реальной фитнес-студией'
+audience: Владельцы фитнес-студий (в т.ч. женских), управляющие, тренеры, предприниматели в спорте и wellness
+problem: Непонятно, какие каналы продвижения работают для локальной фитнес-студии
+format: ТОП-5 обратным отсчётом, офис ↔ студия, каждая сцена — отдельный AI-клип 3–5 с
+target_duration: 50
+tone: экспертно, динамично, с лёгкой иронией
+hook: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
+cta: Напишите мне «фитнес» — пришлю бесплатный чек-лист и проконсультирую по запуску.
+voice_preset: expert
+disclaimer: ''
+scenes:
+- id: s01
+  type: talking
+  duration: 3.5
+  generator: kling
+  reference: pointing_viewer
+  voiceover: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
+  subtitle: Топ-5 инструментов для фитнес-студии. И первое место вас удивит.
+  visual: '[офис] Кот указывает лапой в камеру + заголовок ТОП-5'
+  prompts:
+    kling: The cat points its paw at the camera and talks with a confident, slightly ironic look, short nod, blinks,
+      subtle breathing, ears stay folded, static camera
+  local:
+    ambient:
+      zoom: 0.09
+    overlays:
+    - text: ТОП-5
+      at: 0.1
+      size: 130
+      y: 230
+      accent: топ-5
+    - text: ПРОДВИЖЕНИЯ ФИТНЕС-СТУДИИ
+      at: 0.3
+      size: 56
+      y: 420
+- id: s02
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: typing_evening
+  voiceover: Пятое — Яндекс Директ. Сильный, но в фитнесе всё решают локация и услуги.
+  visual: '[офис] Кот быстро печатает, смотрит аналитику'
+  prompts:
+    kling: The cat types quickly on the laptop keyboard, the screen flickers softly, steam rises from the coffee,
+      slight head movement, ears stay folded, static camera
+  local:
+    overlays:
+    - text: 5 · Яндекс Директ
+      at: директ
+      size: 72
+      y: 250
+      accent: '5'
+- id: s03
+  type: character_motion
+  duration: 3
+  generator: kling
+  reference: fit_walk_arches
+  voiceover: Где-то заходит отлично, а где-то выжигает спрос.
+  visual: '[студия] Кот идёт по залу к камере на фоне арок'
+  prompts:
+    kling: The cat walks calmly toward the camera, tail moves naturally, reflections on the floor and neon arches
+      stay stable, ears stay folded, static camera
+  local:
+    overlays:
+    - text: зависит от гео и услуг
+      at: 0.2
+      size: 48
+      y: 250
+- id: s04
+  type: character_motion
+  duration: 3
+  generator: kling
+  reference: phone_call
+  voiceover: Четвёртое — Telegram Ads.
+  visual: '[офис] Кот с телефоном, кивает'
+  prompts:
+    kling: The cat holds the phone, nods, rolls its eyes playfully, gestures with the other paw, ears stay folded,
+      static camera
+  local:
+    overlays:
+    - text: 4 · Telegram Ads
+      at: telegram
+      size: 72
+      y: 250
+      accent: '4'
+- id: s05
+  type: character_motion
+  duration: 6
+  generator: kling
+  reference: fit_phone_mat
+  voiceover: В городах от двухсот до пятисот тысяч работает неплохо — если есть живые районные сообщества.
+  visual: '[студия] Кот на коврике смотрит смартфон'
+  prompts:
+    kling: The cat lies on the yoga mat and scrolls the smartphone with its paw, looks at the screen, blinks, soft
+      warm lights, ears stay folded, static camera
+  subtitle: В городах от 200 до 500 тысяч работает неплохо — если есть живые районные сообщества.
+  local:
+    overlays:
+    - text: небольшие города
+      at: 0.3
+      size: 48
+      y: 250
+    - text: локальные сообщества
+      at: сообщества
+      size: 48
+      y: 340
+- id: s06
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: pointing_chart
+  voiceover: 'Третье — VK Ads: точная география по городам и районам.'
+  visual: '[офис] Кот объясняет у доски'
+  prompts:
+    kling: The cat points at the chart on the board with its paw, then turns its head to the camera, small gesture
+      with the other paw, ears stay folded, static camera
+  local:
+    overlays:
+    - text: 3 · VK Ads
+      at: vk
+      size: 72
+      y: 250
+      accent: '3'
+- id: s07
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: fit_walk_neon
+  voiceover: И VK часто остаётся доступным, когда проблемы со связью.
+  visual: '[студия] Кот идёт к камере, синие арки и зеркала'
+  prompts:
+    kling: The cat walks toward the camera between glowing blue arches, tail sways, mirror reflections stay stable,
+      ears stay folded, static camera
+  local:
+    overlays:
+    - text: гео · районы · локальный охват
+      at: 0.2
+      size: 48
+      y: 250
+- id: s08
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: detective_magnifier
+  voiceover: Второе — Яндекс Карты и геосервисы. Для локальной студии это маст-хэв.
+  visual: '[офис] Кот с лупой анализирует экран'
+  prompts:
+    kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
+      lens, then it looks at the camera, ears stay folded, static camera
+  local:
+    overlays:
+    - text: 2 · Карты и геосервисы
+      at: карты
+      size: 72
+      y: 250
+      accent: '2'
+- id: s09
+  type: character_motion
+  duration: 6
+  generator: kling
+  reference: fit_logo
+  voiceover: Карточка, отзывы, фото, акции и продвижение могут привести первых клиентов уже в первый месяц.
+  visual: '[студия] Кот у логотипа студии'
+  prompts:
+    kling: The cat stands near the glowing studio logo, looks around the studio, then looks at the camera and blinks,
+      warm light breathes softly, ears stay folded, static camera
+  local:
+    overlays:
+    - text: карточка · отзывы · фото
+      at: карточка
+      size: 48
+      y: 250
+    - text: акции · продвижение
+      at: акции
+      size: 48
+      y: 340
+- id: s10
+  type: character_motion
+  duration: 5
+  generator: kling
+  reference: coffee_guru
+  voiceover: А первое место… Все ждут секретный инструмент. Но нет — это SMM и соцсети.
+  visual: '[офис] Кот спокойно пьёт кофе'
+  prompts:
+    kling: The cat calmly holds the coffee cup, steam rises, it blinks slowly and gives a knowing look to the camera,
+      ears stay folded, static camera
+  local:
+    overlays:
+    - text: 1 · SMM + СОЦСЕТИ
+      at: smm
+      size: 72
+      y: 250
+      accent: '1'
+- id: s11
+  type: character_motion
+  duration: 3
+  generator: kling
+  reference: fit_walk_hammocks
+  voiceover: Запретграмм, VK, Telegram-канал и МАХ.
+  visual: '[студия] Кот идёт под подвесами — по очереди названия соцсетей'
+  prompts:
+    kling: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail moves
+      naturally, ears stay folded, static camera
+  subtitle: Запретграмм, VK, Telegram-канал и MAX.
+  local:
+    overlays:
+    - text: Запретграмм
+      at: запретграмм
+      size: 48
+      y: 240
+    - text: VK
+      at: vk
+      size: 48
+      y: 320
+    - text: Telegram
+      at: telegram
+      size: 48
+      y: 400
+    - text: MAX
+      at: мах
+      size: 48
+      y: 480
+- id: s12
+  type: character_motion
+  duration: 3
+  generator: kling
+  reference: fit_phone_mat2
+  voiceover: В фитнесе покупают не только тренировку.
+  visual: '[студия] Кот на коврике со смартфоном'
+  prompts:
+    kling: The cat lies on the yoga mat holding the smartphone, looks at the camera and slightly tilts its head,
+      breathing calmly, ears stay folded, static camera
+- id: s13
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: fit_walk_low
+  voiceover: Покупают тренера, атмосферу и желание быть частью этого места.
+  visual: '[студия] Кот крадётся к камере, арки'
+  prompts:
+    kling: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow steadily,
+      ears stay folded, static camera
+  local:
+    overlays:
+    - text: тренер · атмосфера · доверие
+      at: тренера
+      size: 48
+      y: 250
+- id: s14
+  type: talking
+  duration: 5
+  generator: kling
+  reference: fit_point_close
+  voiceover: Напишите мне «фитнес» — пришлю бесплатный чек-лист и проконсультирую по запуску.
+  subtitle: Напишите мне «ФИТНЕС» — пришлю бесплатный чек-лист и проконсультирую по запуску.
+  visual: '[студия] Кот тянет лапу к зрителю + крупно «ФИТНЕС»'
+  prompts:
+    kling: The cat reaches its paw toward the camera and talks with a friendly confident expression, short nod,
+      blinks, ears stay folded, static camera
+  local:
+    min_duration: 5.5
+    overlays:
+    - text: 'Напишите:'
+      at: напишите
+      size: 56
+      y: 230
+    - text: ФИТНЕС
+      at: фитнес
+      size: 130
+      y: 330
+      accent: фитнес
+publication:
+  titles:
+  - ТОП-5 инструментов для продвижения фитнес-студии
+  - 'Как продвигать фитнес-студию: 5 каналов'
+  cover_titles:
+  - ТОП-5 продвижения фитнес-студии
+  - Первое место удивит
+  cover_time: 1.0
+  description: 'Пять каналов продвижения для локальной фитнес-студии: Яндекс Директ, Telegram Ads, VK Ads, Яндекс
+    Карты и геосервисы, SMM. Напишите «ФИТНЕС» — пришлю бесплатный чек-лист.'
+  hashtags:
+  - фитнесстудия
+  - продвижениефитнеса
+  - маркетинг
+  - vkads
+  - telegramads
+  - мяуркетинг

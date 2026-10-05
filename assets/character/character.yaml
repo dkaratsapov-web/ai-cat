@@ -309,6 +309,300 @@ references:
   - 0.5
   - 0.45
   note: на мониторе условные цифры +287% — не для кейсов
+- id: fit_logo
+  file: references/fit_logo.jpg
+  source_file: references/fit_logo.jpg
+  kind: reference
+  angle: logo
+  description: 'Студия: кот у логотипа на стене, анфас'
+  status: pending
+  sha256: 35ced7a64fd2f6a1
+  added_at: '2026-10-05T15:55:29+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_45-1.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_arches
+  file: references/fit_walk_arches.jpg
+  source_file: references/fit_walk_arches.jpg
+  kind: reference
+  angle: walk_arches
+  description: 'Студия: идёт к камере на фоне арок с подсветкой'
+  status: pending
+  sha256: 2c9aae3eee277364
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_46-2.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_hammocks
+  file: references/fit_walk_hammocks.jpg
+  source_file: references/fit_walk_hammocks.jpg
+  kind: reference
+  angle: walk_hammocks
+  description: 'Студия: идёт к камере под подвесами (аэройога)'
+  status: pending
+  sha256: 243447e2a6e6cafa
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_47-3.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_flipchart_logo
+  file: references/fit_flipchart_logo.jpg
+  source_file: references/fit_flipchart_logo.jpg
+  kind: reference
+  angle: flipchart_logo
+  description: 'Студия: у флипчарта с воронкой, указка, логотип на фоне'
+  status: pending
+  sha256: 36017d1813cfe8d9
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_48-4.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_point_arches
+  file: references/fit_point_arches.jpg
+  source_file: references/fit_point_arches.jpg
+  kind: reference
+  angle: point_arches
+  description: 'Студия: тянет лапу к зрителю на фоне арок'
+  status: pending
+  sha256: 077194828f58a8bb
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_49-5.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_logo_mat
+  file: references/fit_logo_mat.jpg
+  source_file: references/fit_logo_mat.jpg
+  kind: reference
+  angle: logo_mat
+  description: 'Студия: стоит на коврике у логотипа, анфас'
+  status: pending
+  sha256: 85e291f630b0a18f
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_52-1.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_neon
+  file: references/fit_walk_neon.jpg
+  source_file: references/fit_walk_neon.jpg
+  kind: reference
+  angle: walk_neon
+  description: 'Студия: идёт к камере, синие неоновые арки'
+  status: pending
+  sha256: bbf1e4ca09b5e979
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_53-2.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_phone_mat
+  file: references/fit_phone_mat.jpg
+  source_file: references/fit_phone_mat.jpg
+  kind: reference
+  angle: phone_mat
+  description: 'Студия: лежит на коврике со смартфоном'
+  status: pending
+  sha256: f856f2f76eff8c64
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_55-3.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_away_look
+  file: references/fit_walk_away_look.jpg
+  source_file: references/fit_walk_away_look.jpg
+  kind: reference
+  angle: walk_away_look
+  description: 'Студия: уходит от камеры, оглядывается'
+  status: pending
+  sha256: fb6db713bf598427
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_56-4.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_flipchart_hammocks
+  file: references/fit_flipchart_hammocks.jpg
+  source_file: references/fit_flipchart_hammocks.jpg
+  kind: reference
+  angle: flipchart_hammocks
+  description: 'Студия: у флипчарта с воронкой под подвесами'
+  status: pending
+  sha256: 86f6cc90492c094b
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_48_58-5.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_point_close
+  file: references/fit_point_close.jpg
+  source_file: references/fit_point_close.jpg
+  kind: reference
+  angle: point_close
+  description: 'Студия: крупно, лапа к зрителю, на коврике'
+  status: pending
+  sha256: 92c6d887b82a288d
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_49_48-1.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_low
+  file: references/fit_walk_low.jpg
+  source_file: references/fit_walk_low.jpg
+  kind: reference
+  angle: walk_low
+  description: 'Студия: крадётся к камере, арки'
+  status: pending
+  sha256: f9e4a1eec352cf6f
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_49_50-2.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_phone_mat2
+  file: references/fit_phone_mat2.jpg
+  source_file: references/fit_phone_mat2.jpg
+  kind: reference
+  angle: phone_mat2
+  description: 'Студия: на коврике со смартфоном, смотрит в камеру'
+  status: pending
+  sha256: d1b06f8f20685002
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_49_51-3.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
+- id: fit_walk_away
+  file: references/fit_walk_away.jpg
+  source_file: references/fit_walk_away.jpg
+  kind: reference
+  angle: walk_away
+  description: 'Студия: уходит от камеры под подвесами'
+  status: pending
+  sha256: 1b9fcd1d2d744d5a
+  added_at: '2026-10-05T15:55:30+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 5 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 5 окт. 2026 г., 18_49_53-5.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.4
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
+    mirrors, aerial yoga hammocks, warm track lights'
+  outfit: plain black hoodie
 planned_angles:
 - angle: front_laptop
   description: Кот за ноутбуком, вид спереди

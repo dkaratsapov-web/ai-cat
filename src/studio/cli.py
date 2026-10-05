@@ -96,7 +96,7 @@ def cmd_new(a, s):
                       voiceover="<призыв к действию>", prompts={"kling": "the cat nods confidently, talks to camera"}),
             ],
         )
-    proj = create_project(script, s)
+    proj = create_project(script, s, episode_id=a.id)
     _db(s).log("create", {"title": script.title, "template": a.template}, episode=proj.id)
     print(f"Создан проект {proj.id}\nСценарий: {proj.script_path}")
     if a.brief:
@@ -474,6 +474,7 @@ def build_parser() -> argparse.ArgumentParser:
     n = sub.add_parser("new", help="создать проект ролика")
     n.add_argument("--title")
     n.add_argument("--template", help="имя стартового сценария (studio templates)")
+    n.add_argument("--id", help="свой id проекта (латиница, цифры, -), например episode-fitness-top5")
     n.add_argument("--type", default="expert", choices=list(CONTENT_TYPES))
     n.add_argument("--duration", type=float, default=30)
     n.add_argument("--brief", help="задание обычным текстом")

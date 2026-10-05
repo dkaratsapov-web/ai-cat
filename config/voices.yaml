@@ -15,6 +15,14 @@ presets:
     # Локальная обработка после озвучки (бесплатно): pitch — во сколько раз выше тон (1.0 — без изменений),
     # formant: shifted — мультяшный/детский тембр, preserved — тот же голос, просто выше
     effect: {pitch: 1.5, formant: shifted}
+  # Экспертный голос без мультяшной обработки (ТЗ фитнес-ролика: уверенно, спокойно, не быстро)
+  expert:
+    provider: yandex
+    voice: ermil
+    role: null
+    speed: 1.1
+    pitch_shift: 0
+    effect: null
   calm:
     provider: yandex
     voice: ermil

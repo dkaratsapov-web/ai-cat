@@ -72,7 +72,14 @@ def plan_scene(project: Project, scene: Scene, lib: CharacterLibrary, *, need_au
         return None
     image = scene_start_image(project, scene, lib)
     prompt_raw = scene.prompts.get(gen) or scene.prompts.get("kling") or scene.visual
-    prompt = lib.build_prompt(prompt_raw) if scene.needs_character else prompt_raw
+    ref_meta: dict = {}
+    if scene.needs_character and scene.reference:
+        try:   # у кадра может быть своя локация/одежда (например, фитнес-студия) — иначе в промпт пойдёт офис
+            ref_meta = lib.get(scene.reference)
+        except Exception:  # noqa: BLE001
+            ref_meta = {}
+    prompt = (lib.build_prompt(prompt_raw, outfit=ref_meta.get("outfit"), location=ref_meta.get("location"))
+              if scene.needs_character else prompt_raw)
     negative = lib.negative() if scene.needs_character else ""
     audio = None
     meta = scene_voice_meta(project, scene.id)
