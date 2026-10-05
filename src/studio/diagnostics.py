@@ -75,7 +75,7 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
     line("OK" if env_file.exists() else "WARN", ".env", "найден" if env_file.exists() else "нет — скопируйте .env.example в .env")
     for name in ("KLING_API_KEY", "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "YANDEX_API_KEY", "YANDEX_FOLDER_ID",
                  "ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID",
-                 "HEDRA_API_KEY", "RUNWAYML_API_SECRET"):
+                 "HIGGSFIELD_API_KEY", "HIGGSFIELD_API_SECRET", "HEDRA_API_KEY", "RUNWAYML_API_SECRET"):
         src = "" if not os.environ.get(name) or name in DOTENV_KEYS else "  ⚠ взят из переменных Windows, а не из .env"
         val = (os.environ.get(name) or "").strip()
         if name == "KLING_API_KEY" and val and not val.startswith("api-key-kling-"):
