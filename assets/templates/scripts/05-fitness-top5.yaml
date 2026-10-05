@@ -9,7 +9,7 @@ format: ТОП-5 обратным отсчётом, офис ↔ студия, �
 target_duration: 50
 tone: экспертно, динамично, с лёгкой иронией
 hook: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
-cta: Напишите мне «фитнес» — пришлю бесплатный чек-лист и проконсультирую по запуску.
+cta: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
 voice_preset: expert
 disclaimer: ''
 scenes:
@@ -43,7 +43,7 @@ scenes:
   duration: 5
   generator: kling
   reference: typing_evening
-  voiceover: Пятое — Яндекс Директ. Сильный, но в фитнесе всё решает локация и услуги.
+  voiceover: Пятое — Яндекс Директ. В фитнесе всё решают локация и услуги.
   visual: '[офис] Кот быстро печатает, смотрит аналитику'
   prompts:
     kling: The cat types quickly on the laptop keyboard, the screen flickers softly, steam rises from the coffee,
@@ -98,12 +98,12 @@ scenes:
   duration: 5
   generator: kling
   reference: fit_phone_mat
-  voiceover: В городах от двухсот до пятисот тысяч работает неплохо — если есть живые районные сообщества.
+  voiceover: В городах на двести–пятьсот тысяч работает, если есть живые районные сообщества.
   visual: '[студия] Кот на коврике смотрит смартфон'
   prompts:
     kling: The cat lies on the yoga mat and scrolls the smartphone with its paw, looks at the screen, blinks, soft
       warm lights, ears stay folded, static camera
-  subtitle: В городах от 200 до 500 тысяч работает неплохо — если есть живые районные сообщества.
+  subtitle: В городах на 200–500 тысяч работает, если есть живые районные сообщества.
   local:
     overlays:
     - text: небольшие города
@@ -174,7 +174,7 @@ scenes:
   duration: 5
   generator: kling
   reference: fit_logo
-  voiceover: Карточка, отзывы, фото, акции и продвижение могут привести первых клиентов уже в первый месяц.
+  voiceover: Карточка, отзывы, фото и акции могут привести первых клиентов уже в первый месяц.
   visual: '[студия] Кот у логотипа студии'
   prompts:
     kling: The cat stands near the glowing studio logo, looks around the studio, then looks at the camera and blinks,
@@ -194,7 +194,7 @@ scenes:
   duration: 5
   generator: kling
   reference: coffee_guru
-  voiceover: А первое место… Все ждут секретный инструмент. Но нет — это SMM и соцсети.
+  voiceover: А первое место… Все ждут секретный инструмент. Но нет — это SMM.
   visual: '[офис] Кот спокойно пьёт кофе'
   prompts:
     kling: The cat calmly holds the coffee cup, steam rises, it blinks slowly and gives a knowing look to the camera,
@@ -247,7 +247,7 @@ scenes:
   duration: 5
   generator: higgsfield
   reference: fit_walk_low
-  voiceover: В фитнесе покупают не тренировку, а тренера, атмосферу и желание быть частью этого места.
+  voiceover: В фитнесе покупают тренера, атмосферу и желание быть частью этого места.
   visual: '[студия] Кот крадётся к камере, арки'
   prompts:
     higgsfield: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow
@@ -266,8 +266,8 @@ scenes:
   duration: 5
   generator: kling
   reference: fit_point_close
-  voiceover: Напишите мне «фитнес» — пришлю бесплатный чек-лист и проконсультирую по запуску.
-  subtitle: Напишите мне «ФИТНЕС» — пришлю бесплатный чек-лист и проконсультирую по запуску.
+  voiceover: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
+  subtitle: Напишите «ФИТНЕС» — пришлю бесплатный чек-лист и проконсультирую.
   visual: '[студия] Кот тянет лапу к зрителю + крупно «ФИТНЕС»'
   prompts:
     kling: The cat reaches its paw toward the camera and talks with a friendly confident expression, short nod,
