@@ -216,9 +216,17 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
         raise AssemblyError(f"{sc.id}: нет исходника сцены ({sc.generator}). Выполните: {hint}")
     # Короткий клип без речи продлеваем «туда-обратно», а не стоп-кадром (говорящие — только стоп-кадр,
     # иначе губы разойдутся с речью)
-    extend = sc.local.get("extend") or ("freeze" if sc.type == "talking" else "pingpong")
-    if extend == "pingpong" and ffmpeg.duration(src) < length - 0.05:
+    # Короткий клип: по умолчанию лёгкое замедление (до ×1,3 — на глаз незаметно), остаток — стоп-кадр,
+    # который «оживляет» наезд камеры живого слоя. «Туда-обратно» (pingpong) — только по явному запросу:
+    # повтор движения заметен. Говорящие сцены не замедляем — губы разойдутся с речью.
+    extend = sc.local.get("extend") or ("freeze" if sc.type == "talking" else "slow")
+    src_dur = ffmpeg.duration(src)
+    if extend == "pingpong" and src_dur < length - 0.05:
         src = pingpong(src, project.dir("work") / f"{sc.id}.pingpong.mp4", project.settings)
+    elif extend == "slow" and src_dur < length - 0.05:
+        factor = min(length / max(src_dur, 0.1), float(sc.local.get("max_slow", 1.3)))
+        if factor > 1.01:
+            src = slow_clip(src, project.dir("work") / f"{sc.id}.slow.mp4", factor, project.settings)
     amb = ambient_config(project.settings, sc.local)
     live = bool(amb.get("enabled")) and sc.type in amb.get("apply_to", [])
     overlays = list(sc.local.get("overlays") or [])
@@ -232,6 +240,14 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
         return apply_ambient(base, out, length, project.settings, {**amb, "enabled": live}, seed=sc.id,
                              progress=sc.id, overlays=overlays)
     return normalize_clip(src, out, length, project.settings)
+
+
+def slow_clip(src: Path, out: Path, factor: float, settings: Settings) -> Path:
+    """Плавное замедление клипа в factor раз (без повтора движения)."""
+    fps = settings.get("video.fps")
+    ffmpeg.run(["ffmpeg", "-i", src, "-vf", f"setpts={factor:.4f}*PTS,fps={fps}", "-an", "-c:v", "libx264",
+                "-preset", "veryfast", "-crf", str(settings.get("video.crf", 18)), "-pix_fmt", "yuv420p", out])
+    return out
 
 
 def pingpong(src: Path, out: Path, settings: Settings, repeats: int = 3) -> Path:

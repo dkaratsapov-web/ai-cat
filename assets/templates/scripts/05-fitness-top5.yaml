@@ -10,33 +10,33 @@ target_duration: 50
 tone: экспертно, динамично, с лёгкой иронией
 hook: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
 cta: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
-voice_preset: expert
+voice_preset: default
 disclaimer: ''
 scenes:
 - id: s01
   type: talking
   duration: 3.5
   generator: kling
-  reference: pointing_viewer
+  reference: closeup_front
   voiceover: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
   subtitle: Топ-5 инструментов для фитнес-студии. И первое место вас удивит.
   visual: '[офис] Кот указывает лапой в камеру + заголовок ТОП-5'
   prompts:
-    kling: The cat points its paw at the camera and talks with a confident, slightly ironic look, short nod, blinks,
-      subtle breathing, ears stay folded, static camera
+    kling: The cat talks to the camera with a confident, slightly ironic look, small head tilt, blinks, subtle breathing,
+      ears stay folded, static camera
   local:
     ambient:
       zoom: 0.09
     overlays:
     - text: ТОП-5
-      at: 0.1
-      size: 130
-      y: 230
       accent: топ-5
+      at: 0.1
+      size: 110
+      y: 930
     - text: ПРОДВИЖЕНИЯ ФИТНЕС-СТУДИИ
       at: 0.3
-      size: 56
-      y: 420
+      size: 52
+      y: 1100
     mode: pro
 - id: s02
   type: character_motion
@@ -53,7 +53,7 @@ scenes:
     - text: 5 · Яндекс Директ
       at: директ
       size: 72
-      y: 250
+      y: 1120
       accent: '5'
       image: yandex_direct
 - id: s03
@@ -73,7 +73,7 @@ scenes:
     - text: зависит от гео и услуг
       at: 0.2
       size: 48
-      y: 250
+      y: 1120
     model: bytedance/seedance-2.0/image-to-video
 - id: s04
   type: character_motion
@@ -90,7 +90,7 @@ scenes:
     - text: 4 · Telegram Ads
       at: telegram
       size: 72
-      y: 250
+      y: 1120
       accent: '4'
       image: telegram
 - id: s05
@@ -109,11 +109,11 @@ scenes:
     - text: небольшие города
       at: 0.3
       size: 48
-      y: 250
+      y: 1000
     - text: локальные сообщества
       at: сообщества
       size: 48
-      y: 340
+      y: 1130
 - id: s06
   type: character_motion
   duration: 4
@@ -129,7 +129,7 @@ scenes:
     - text: 3 · VK Ads
       at: vk
       size: 72
-      y: 250
+      y: 1120
       accent: '3'
       image: vk_ads
 - id: s07
@@ -149,7 +149,7 @@ scenes:
     - text: гео · районы · локальный охват
       at: 0.2
       size: 48
-      y: 250
+      y: 1120
     model: bytedance/seedance-2.0/image-to-video
 - id: s08
   type: character_motion
@@ -166,29 +166,30 @@ scenes:
     - text: 2 · Карты и геосервисы
       at: карты
       size: 72
-      y: 250
+      y: 1120
       accent: '2'
       image: yandex_maps
 - id: s09
-  type: character_motion
+  type: talking
   duration: 5
   generator: kling
-  reference: fit_logo
+  reference: fit_logo_mat
   voiceover: Карточка, отзывы, фото и акции могут привести первых клиентов уже в первый месяц.
   visual: '[студия] Кот у логотипа студии'
   prompts:
-    kling: The cat stands near the glowing studio logo, looks around the studio, then looks at the camera and blinks,
-      warm light breathes softly, ears stay folded, static camera
+    kling: The cat talks to the camera calmly and confidently, small nods, blinks, warm studio lights glow softly,
+      ears stay folded, static camera
   local:
     overlays:
     - text: карточка · отзывы · фото
       at: карточка
       size: 48
-      y: 250
+      y: 1000
     - text: акции · продвижение
       at: акции
       size: 48
-      y: 340
+      y: 1130
+    mode: pro
 - id: s10
   type: character_motion
   duration: 5
@@ -204,7 +205,7 @@ scenes:
     - text: 1 · SMM + СОЦСЕТИ
       at: smm
       size: 72
-      y: 250
+      y: 1120
       accent: '1'
 - id: s11
   type: character_motion
@@ -223,24 +224,28 @@ scenes:
     overlays:
     - text: Запретграмм
       at: запретграмм
-      size: 52
-      y: 230
+      size: 48
+      y: 1010
       image: instagram
+      x: 0.3
     - text: VK
       at: vk
-      size: 52
-      y: 340
+      size: 48
+      y: 1010
       image: vk
+      x: 0.7
     - text: Telegram
       at: telegram
-      size: 52
-      y: 450
+      size: 48
+      y: 1120
       image: telegram
+      x: 0.3
     - text: MAX
       at: мах
-      size: 52
-      y: 560
+      size: 48
+      y: 1120
       image: max
+      x: 0.7
     model: bytedance/seedance-2.0/image-to-video
 - id: s13
   type: character_motion
@@ -259,34 +264,34 @@ scenes:
     - text: тренер · атмосфера · доверие
       at: тренера
       size: 48
-      y: 250
+      y: 1120
     model: bytedance/seedance-2.0/image-to-video
 - id: s14
   type: talking
   duration: 5
   generator: kling
-  reference: fit_point_close
+  reference: fit_phone_mat2
   voiceover: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
   subtitle: Напишите «ФИТНЕС» — пришлю бесплатный чек-лист и проконсультирую.
   visual: '[студия] Кот тянет лапу к зрителю + крупно «ФИТНЕС»'
   prompts:
-    kling: The cat reaches its paw toward the camera and talks with a friendly confident expression, short nod,
+    kling: The cat holds the smartphone and talks to the camera with a friendly confident expression, short nod,
       blinks, ears stay folded, static camera
   local:
     min_duration: 5.5
     overlays:
     - text: 'Напишите:'
       at: напишите
-      size: 56
-      y: 230
+      size: 52
+      y: 940
     - text: ФИТНЕС
-      at: фитнес
-      size: 130
-      y: 330
       accent: фитнес
+      at: фитнес
+      size: 120
+      y: 1040
     mode: pro
 - id: s15
-  type: character_motion
+  type: talking
   duration: 4
   generator: kling
   reference: fit_logo
@@ -294,14 +299,15 @@ scenes:
   subtitle: А девушек из Твери ждём в студии на Чернышевского, 31.
   visual: '[студия] Кот у логотипа студии приглашающе машет лапой; адрес + пометка «Реклама»'
   prompts:
-    kling: The cat stands near the glowing studio logo, makes a welcoming wave with its paw, then looks at the camera
-      and blinks, warm light breathes softly, ears stay folded, static camera
+    kling: The cat stands near the glowing studio logo and talks to the camera with a warm inviting expression,
+      small nod, blinks, ears stay folded, static camera
   local:
     overlays:
     - text: Тверь, ул. Чернышевского, 31
       at: чернышевского
       size: 56
-      y: 250
+      y: 1120
+    mode: pro
 publication:
   titles:
   - ТОП-5 инструментов для продвижения фитнес-студии

@@ -186,7 +186,8 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
         text_w = max(d.textlength(line, font=f) for line in lines)
         box_w = text_w + 56 + logo_w
         box_h = max(lh * len(lines), logo.height if logo else 0) + 36
-        x0 = (w - box_w) / 2
+        x0 = (w * float(ov.get("x", 0.5))) - box_w / 2   # x — центр плашки в долях ширины
+        x0 = min(max(x0, 24), w - box_w - 24)
         y0 = float(ov.get("y", sa["top"] + 40)) + (1 - p) * 30
         a = int(255 * p)
         d.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=28, fill=(14, 16, 22, int(205 * p)))
