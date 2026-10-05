@@ -706,6 +706,24 @@ def cmd_chat(a, s):
     return 0
 
 
+def cmd_bot(a, s):
+    from .bot.app import BotApp
+    BotApp(s, port=a.port, dev=a.dev, tunnel=not a.no_tunnel).run()
+    return 0
+
+
+def cmd_kb(a, s):
+    from . import knowledge
+    if a.action == "index":
+        print(f"Оглавление: {knowledge.write_index(s)}")
+    elif a.action == "search":
+        for h in knowledge.search(s, " ".join(a.query)):
+            print(f"[{h['section']}] {h['path']}\n  {h['snippet'][:300].replace(chr(10), chr(10) + '  ')}\n")
+    else:
+        print(knowledge.catalog_text(s, 10**6))
+    return 0
+
+
 def cmd_assets(a, s):
     from .director.assets import approved_assets, export_index, pending_character_refs
     if a.export:
@@ -937,6 +955,17 @@ def build_parser() -> argparse.ArgumentParser:
     ch.add_argument("--share", action="store_true", help="отправить переписку Claude через репозиторий (без запуска чата)")
     ch.add_argument("--pull", action="store_true", help="получить ответы Claude из репозитория")
     ch.set_defaults(fn=cmd_chat)
+
+    bt = sub.add_parser("bot", help="Telegram-бот + мини-приложение (Claude и директор)")
+    bt.add_argument("--port", type=int, default=8765)
+    bt.add_argument("--no-tunnel", action="store_true", help="не запускать туннель cloudflared")
+    bt.add_argument("--dev", action="store_true", help="локальная отладка без Telegram и без проверки подписи")
+    bt.set_defaults(fn=cmd_bot)
+
+    kb = sub.add_parser("kb", help="база знаний и материалов: list | index | search")
+    kb.add_argument("action", choices=["list", "index", "search"])
+    kb.add_argument("query", nargs="*")
+    kb.set_defaults(fn=cmd_kb)
 
     h = sub.add_parser("history", help="журнал действий")
     h.add_argument("episode", nargs="?")

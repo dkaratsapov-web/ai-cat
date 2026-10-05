@@ -104,6 +104,11 @@ class Bridge:
             f.write(f"{rec['at']} {self.p.id} {kind} {scene or '-'} {self.mode} {resp.get('id')} {data.get('status')}\n")
         return data
 
+    def _kb(self, query: str) -> str:
+        from ..knowledge import search
+        hits = search(self.p.settings, query, limit=5)
+        return "\n\n".join(f"[{h['section']}] {h['path']}:\n{h['snippet']}" for h in hits) or "(ничего не найдено)"
+
     def ask(self, question: str, *, log_question: bool = True) -> str | None:
         """Свободный вопрос владельца директору в той же переписке эпизода. Ответ — обычный текст."""
         from . import chat
@@ -127,7 +132,8 @@ class Bridge:
                 f"коротко и по делу. Если данных не хватает — скажи, каких именно. Платные действия только предлагай, "
                 f"решает владелец.\n\nЭПИЗОД: {script.title}, CTA: {script.cta}\nСЦЕНЫ И СТАТУСЫ:\n```json\n"
                 f"{json.dumps(scenes, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{notes}\n\n"
-                f"ПОСЛЕДНИЕ СООБЩЕНИЯ ЧАТА (владелец, директор, Claude-продюсер):\n{chat.recent_text(self.p, 12)}")
+                f"ПОСЛЕДНИЕ СООБЩЕНИЯ ЧАТА (владелец, директор, Claude-продюсер):\n{chat.recent_text(self.p, 12)}"
+                f"\n\nБАЗА ЗНАНИЙ — фрагменты по теме вопроса (опирайся на них, не выдумывай):\n{self._kb(question)}")
         body = {"model": self.cfg["model"], "instructions": self.instructions(),
                 "input": [{"role": "user", "content": [{"type": "input_text", "text": text}]}],
                 "store": bool(self.cfg.get("store", True)), "max_output_tokens": int(self.cfg.get("max_output_tokens", 4000))}

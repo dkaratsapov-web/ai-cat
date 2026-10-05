@@ -11,6 +11,7 @@ dependencies = ["PyYAML>=6.0", "requests>=2.31", "Pillow>=10.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+bot = ["anthropic>=1.0"]
 
 [project.scripts]
 studio = "studio.cli:main"
@@ -21,3 +22,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.setuptools.package-data]
+"studio.bot" = ["*.html"]

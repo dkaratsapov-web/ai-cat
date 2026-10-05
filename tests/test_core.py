@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -602,3 +603,52 @@ def test_director_chat_render(settings):
     out = chat.render(project)
     page = out.read_text(encoding="utf-8")
     assert "вопрос &lt;b&gt;" in page and 'class="msg director"' in page
+
+
+def test_bot_init_data_signature():
+    import hashlib, hmac, json, time
+    from urllib.parse import urlencode
+    from studio.bot.app import check_init_data
+    token, owner = "123:ABC", 42
+    fields = {"auth_date": str(int(time.time())), "user": json.dumps({"id": owner}), "query_id": "q"}
+    check = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+    key = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    fields["hash"] = hmac.new(key, check.encode(), hashlib.sha256).hexdigest()
+    good = urlencode(fields)
+    assert check_init_data(good, token, owner)
+    assert not check_init_data(good, token, 7)            # чужой пользователь
+    assert not check_init_data(good, "999:XYZ", owner)    # чужой бот
+    assert not check_init_data(good.replace("q", "x"), token, owner)
+
+
+def test_bot_producer_tools_and_paid_guard(settings, monkeypatch):
+    import yaml
+    from types import SimpleNamespace as NS
+    from studio.bot import agent
+    assert agent.check_free(["generate", "ep"]).startswith("generate")
+    assert agent.check_free(["pipeline", "ep"]) is not None
+    assert agent.check_free(["qa", "ep"]) is None
+    assert agent.check_free(["qa", "ep", "--yes"]) is not None
+    shutil.copy(ROOT / "config/agents.yaml", settings.root / "config/agents.yaml")
+    cfg = yaml.safe_load((settings.root / "config/agents.yaml").read_text(encoding="utf-8"))
+
+    def blk(**kw):
+        return NS(**kw, model_dump=lambda exclude_none=True, kw=kw: dict(kw))
+    replies = [NS(stop_reason="tool_use", content=[blk(type="tool_use", id="t1", name="studio", input={"args": ["generate", "x"]})]),
+               NS(stop_reason="end_turn", content=[blk(type="text", text="Готово")])]
+    seen = []
+
+    class FakeBeta:
+        def create(self, **kw):
+            seen.append(kw)
+            return replies.pop(0)
+    fake = NS(beta=NS(messages=FakeBeta()), messages=FakeBeta())
+    monkeypatch.setitem(sys.modules, "anthropic", NS(Anthropic=lambda: fake, AuthenticationError=Exception,
+                        PermissionDeniedError=Exception, RateLimitError=Exception, APIStatusError=Exception,
+                        APIConnectionError=Exception))
+    host = NS(notify=lambda t: None)
+    p = agent.Producer(settings, cfg, host, settings.root / "data/bot/h.json")
+    assert p.chat("собери ролик") == "Готово"
+    tool_result = seen[1]["messages"][2]["content"][0]["content"]   # user → tool_use → tool_result
+    assert tool_result.startswith("ОТКАЗ") and "request_paid" in tool_result   # платное без кнопки не запускается
+    assert seen[0]["fallbacks"] == "default" and seen[0]["model"] == cfg["producer"]["model"]

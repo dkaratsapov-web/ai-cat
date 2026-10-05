@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Студия МяуРкетинг</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:var(--tg-theme-bg-color,#f4f5f7);--fg:var(--tg-theme-text-color,#1d2129);--muted:var(--tg-theme-hint-color,#7a808c);
+  --card:var(--tg-theme-secondary-bg-color,#fff);--accent:var(--tg-theme-button-color,#2f7cf6);--accent-fg:var(--tg-theme-button-text-color,#fff);
+  --line:color-mix(in srgb,var(--fg) 12%,transparent);
+  --owner:color-mix(in srgb,var(--accent) 22%,var(--card));--claude:color-mix(in srgb,#8b5cf6 18%,var(--card));
+  --director:color-mix(in srgb,#16a34a 18%,var(--card));
+}
+@media (prefers-color-scheme:dark){:root:not([data-tg]){--bg:#15171c;--fg:#e8eaee;--muted:#9aa1ad;--card:#1e2128}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column}
+nav{display:flex;gap:4px;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;padding:8px 4px;border-radius:10px}
+nav button.on{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.tab{flex:1;overflow:auto;padding:10px 12px 16px;display:none}.tab.on{display:block}
+#chat.on{display:flex;flex-direction:column;padding:0}
+#feed{flex:1;overflow:auto;padding:10px 12px}
+.msg{max-width:88%;margin:6px 0;padding:8px 11px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word;background:var(--card)}
+.msg .who{font-size:12px;color:var(--muted);margin-bottom:2px}
+.owner{margin-left:auto;background:var(--owner);border-bottom-right-radius:4px}
+.claude{background:var(--claude);border-bottom-left-radius:4px}.director{background:var(--director);border-bottom-left-radius:4px}
+.system{max-width:100%;background:transparent;color:var(--muted);font-size:13px;padding:2px 4px;text-align:center}
+.msg img,.msg video{max-width:100%;border-radius:10px;margin-top:6px;display:block}
+.pay{border:1px solid var(--accent);background:var(--card);border-radius:14px;padding:10px;margin:8px 0;white-space:pre-wrap;font-size:13px}
+.pay .row{display:flex;gap:8px;margin-top:8px}
+footer{background:var(--card);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
+.chips{display:flex;gap:6px;margin-bottom:6px}.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:4px 10px;font:inherit;font-size:13px}
+.chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.send{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;min-height:40px;max-height:140px;resize:none;border:1px solid var(--line);border-radius:12px;padding:9px 11px;background:var(--bg);color:var(--fg);font:inherit}
+.btn{border:0;border-radius:12px;padding:10px 14px;background:var(--accent);color:var(--accent-fg);font:inherit;font-weight:600}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}.btn:disabled{opacity:.5}
+#status{font-size:12px;color:var(--muted);min-height:16px;margin-top:4px}
+select,input[type=search]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font:inherit}
+.card{background:var(--card);border-radius:14px;padding:10px 12px;margin:8px 0}
+.sc{display:flex;justify-content:space-between;gap:8px}.sc b{font-size:15px}.sc small{color:var(--muted)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.tag{font-size:12px;padding:1px 8px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.tag.final,.tag.pass,.tag.approved{color:#16a34a}.tag.revise,.tag.fail{color:#dc2626}.tag.review,.tag.manual_review,.tag.manual{color:#d97706}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+h3{margin:14px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.hit{background:var(--card);border-radius:12px;padding:8px 10px;margin:6px 0;font-size:13px;white-space:pre-wrap}
+.hit b{display:block;font-size:12px;color:var(--accent);margin-bottom:2px;word-break:break-all}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.thumbs img{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:8px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+</style>
+</head>
+<body>
+<nav><button data-t="chat" class="on">Чат</button><button data-t="ep">Эпизод</button><button data-t="kb">База</button></nav>
+
+<section id="chat" class="tab on">
+  <div id="feed"><div class="empty">Загрузка…</div></div>
+  <footer>
+    <div class="chips"><button class="chip on" data-to="claude">🐱 Claude</button><button class="chip" data-to="director">🎬 Директор</button><button class="chip" data-to="both">Обоим</button></div>
+    <div class="send"><textarea id="t" rows="1" placeholder="Задача или вопрос…"></textarea><button class="btn" id="b">➤</button></div>
+    <div id="status"></div>
+  </footer>
+</section>
+
+<section id="ep" class="tab">
+  <select id="epsel"></select>
+  <div class="quick">
+    <button class="btn ghost" data-q="Покажи статус эпизода, расходы и что осталось сделать.">Статус и расходы</button>
+    <button class="btn ghost" data-q="Собери ролик (с музыкой и без), запусти qa и пришли мне ролик и отчёт.">Собрать + QA</button>
+    <button class="btn ghost" data-q="Отдай собранный ролик директору на финальное ревью и разбери его замечания.">Ревью директора</button>
+    <button class="btn ghost" data-q="Посмотри кадры каждой сцены (контактный лист) и скажи, что не так: плашки на морде, повторы, читаемость.">Проверить кадры</button>
+  </div>
+  <div id="scenes"></div>
+</section>
+
+<section id="kb" class="tab">
+  <input type="search" id="kq" placeholder="Поиск: кейсы, фитнес, CTA, правила…">
+  <div id="kres"></div>
+</section>
+
+<script>
+const tg=window.Telegram&&Telegram.WebApp;if(tg&&tg.initData){tg.ready();tg.expand();document.documentElement.dataset.tg=1}
+const INIT=tg?tg.initData:'';const H={'Content-Type':'application/json','X-Init-Data':INIT};
+const $=s=>document.querySelector(s);let to='claude',last='',snap=null,noteAt=0;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const furl=p=>'/api/file?path='+encodeURIComponent(p)+'&auth='+encodeURIComponent(INIT);
+function note(t){$('#status').textContent=t;noteAt=Date.now()}
+async function api(path,body){const r=await fetch(path,body?{method:'POST',headers:H,body:JSON.stringify(body)}:{headers:H});
+  const j=await r.json().catch(()=>({error:'нет ответа'}));if(!r.ok)throw new Error(j.error||r.status);return j}
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$('#'+b.dataset.t).classList.add('on');if(b.dataset.t==='kb'&&!$('#kres').innerHTML)kb('')});
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');to=c.dataset.to});
+
+function names(r){return r==='owner'?'Вы':r==='system'?'':(snap&&snap.agents[r])||r}
+function render(){
+  const f=$('#feed');const atBottom=f.scrollHeight-f.scrollTop-f.clientHeight<90;
+  const pend=snap.pending.map(p=>`<div class="pay">💳 <b>studio ${esc(p.command)} ${esc(p.args.join(' '))}</b>\n${esc(p.reason)}\n\n${esc(p.estimate.slice(-900))}
+    <div class="row"><button class="btn" onclick="pay('${p.id}',1)">✅ Утверждаю</button><button class="btn ghost" onclick="pay('${p.id}',0)">Отмена</button></div></div>`).join('');
+  const msgs=snap.feed.map(m=>{let media='';if(m.file){media=/\.(mp4|mov)$/i.test(m.file)?`<video src="${furl(m.file)}" controls playsinline></video>`:
+      /\.(jpe?g|png|webp)$/i.test(m.file)?`<img src="${furl(m.file)}">`:`<div class="tag">${esc(m.file)}</div>`}
+    const who=names(m.role);return `<div class="msg ${esc(m.role)}">${who?`<div class="who">${esc(who)}${m.to&&m.role==='owner'?' → '+esc(names(m.to==='both'?'claude':m.to))+(m.to==='both'?' и директору':''):''}</div>`:''}${esc(m.text)}${media}</div>`}).join('');
+  f.innerHTML=(msgs||'<div class="empty">Напишите задачу: «собери ролик», «что улучшить в хуке?», «найди в базе кейсы по фитнесу»</div>')+pend;
+  if(atBottom||!f.dataset.init){f.scrollTop=f.scrollHeight;f.dataset.init=1}
+}
+function renderEp(){
+  const sel=$('#epsel');const opts=snap.episodes.map(e=>`<option ${e===snap.episode?'selected':''}>${esc(e)}</option>`).join('');
+  if(sel.dataset.k!==opts){sel.innerHTML=opts;sel.dataset.k=opts}
+  const total=snap.scenes.reduce((a,s)=>a+(s.cost||0),0);
+  $('#scenes').innerHTML=`<h3>Сцены · потрачено $${total.toFixed(2)}</h3>`+snap.scenes.map(s=>`<div class="card"><div class="sc"><b>${esc(s.id)}</b><small>${esc(s.type||'')} · ${esc(s.generator||'')}${s.cost?' · $'+s.cost.toFixed(2):''}</small></div>
+    <div>${esc(s.text)}</div><div class="tags"><span class="tag ${esc(s.status)}">${esc(s.status)}</span>${s.v?`<span class="tag">v${s.v}</span>`:''}
+    <span class="tag ${esc(s.director)}">директор: ${esc(s.director)}</span><span class="tag ${esc(s.qc)}">кот: ${esc(s.qc)}</span></div></div>`).join('');
+}
+async function load(){try{snap=await api('/api/state');const k=JSON.stringify([snap.feed.length,snap.feed.at(-1)?.id,snap.pending.map(p=>p.id),snap.busy]);
+  if(k!==last){last=k;render()}renderEp();
+  const b=snap.busy;if(Date.now()-noteAt>8000)$('#status').textContent=b.claude?'🐱 Claude работает…':b.director?'🎬 Директор смотрит…':b.paid?'💳 Идёт платная генерация…':
+    (!snap.claude_ready?'Claude не подключён (ANTHROPIC_API_KEY)':!snap.director_ready?'Директор не подключён (OPENAI_API_KEY)':'')}
+  catch(e){$('#status').textContent='Нет связи со студией: '+e.message}}
+async function send(text,target){text=(text||'').trim();if(!text)return;try{await api('/api/send',{text,to:target||to});$('#t').value='';note('Отправлено');load()}catch(e){note(e.message)}}
+async function pay(id,ok){if(ok&&!confirm('Запустить платную операцию по этой смете?'))return;try{const r=await api('/api/pay',{id,ok:!!ok});note(r.result);load()}catch(e){note(e.message)}}
+$('#b').onclick=()=>send($('#t').value);$('#t').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))send($('#t').value)});
+$('#t').addEventListener('input',e=>{e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,140)+'px'});
+$('#epsel').onchange=async e=>{try{await api('/api/episode',{id:e.target.value});note('Эпизод: '+e.target.value);load()}catch(x){note(x.message)}};
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{send(b.dataset.q,'claude');document.querySelector('nav button[data-t=chat]').click()});
+let kt;$('#kq').oninput=e=>{clearTimeout(kt);kt=setTimeout(()=>kb(e.target.value),300)};
+async function kb(q){try{const r=await api('/api/kb?q='+encodeURIComponent(q));
+  if(r.hits){$('#kres').innerHTML=r.hits.map(h=>`<div class="hit"><b>${esc(h.path)}</b>${esc(h.snippet)}</div>`).join('')||'<div class="empty">Ничего не найдено</div>';return}
+  const groups={};r.docs.forEach(d=>(groups[d.section]=groups[d.section]||[]).push(d));
+  $('#kres').innerHTML=Object.entries(groups).map(([s,ds])=>`<h3>${esc(s)} · ${ds.length}</h3>`+(ds[0].kind==='image'?
+    `<div class="thumbs">${ds.slice(0,12).map(d=>`<img loading="lazy" src="${furl(d.path)}" title="${esc(d.title)}">`).join('')}</div>`:
+    ds.map(d=>`<div class="hit"><b>${esc(d.path)}</b>${esc(d.title)}</div>`).join(''))).join('')}catch(e){$('#kres').innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+load();setInterval(load,2500);
+</script>
+</body>
+</html>
