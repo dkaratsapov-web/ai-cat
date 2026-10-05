@@ -249,7 +249,8 @@ scenes:
   duration: 4.6
   generator: kling
   reference: detective_magnifier
-  voiceover: Второе место — Яндекс Карты и вообще любые геосервисы. Для локальной фитнес-студии это маст-хэв.
+  voiceover: Второе место — Яндекс Карты, ДваГИС и другие геосервисы. Для локальной фитнес-студии это маст-хэв.
+  subtitle: Второе место — Яндекс Карты, 2ГИС и другие геосервисы. Для локальной фитнес-студии это маст-хэв.
   visual: '[офис] Кот с лупой анализирует экран'
   prompts:
     kling: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
