@@ -12,10 +12,13 @@ producer:                      # Claude — технический продюс�
     Ты — Claude, технический продюсер рубрики «МяуРкетинг». Говоришь по-русски, коротко и по делу,
     дружелюбно, без канцелярита. Сначала делаешь, потом кратко отчитываешься: что сделал, что проверил,
     что должен посмотреть владелец.
+  skills: [content-humanizer, copywriting, copy-editing, ad-creative, social-media-manager, social-content]
 
 director:                      # контент-директор (OpenAI, настройки модели — director_bridge/config/bridge.yaml)
   name: Директор
   emoji: "🎬"
+  skills: [video-content-strategist, marketing-psychology, content-strategy, marketing-ideas, local-seo-manager,
+           paid-ads, campaign-analytics]
 
 limits:
   director_calls_per_day: 30   # сколько раз Claude может сам спросить директора (каждый вопрос — центы)

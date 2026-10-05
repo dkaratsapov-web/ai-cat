@@ -153,6 +153,24 @@ def check_free(args: list[str]) -> str | None:
     return None
 
 
+def skills_note(root: Path, names: list[str]) -> str:
+    """Список методик агента: перед задачей по теме агент читает нужную (read_file) — так знания не раздувают
+    каждый запрос."""
+    rows = []
+    for n in names:
+        f = root / "knowledge" / "skills" / f"{n}.md"
+        if f.exists():
+            desc = ""
+            for line in f.read_text(encoding="utf-8").splitlines()[:12]:
+                if line.lower().startswith("description:"):
+                    desc = line.split(":", 1)[1].strip().strip('"')[:160]
+            rows.append(f"- knowledge/skills/{n}.md — {desc}")
+    if not rows:
+        return ""
+    return ("ТВОИ МЕТОДИКИ (прочитай нужную через read_file перед работой по теме; приёмы бери, «статистику» без "
+            "источника в ролики не переноси):\n" + "\n".join(rows))
+
+
 class Producer:
     def __init__(self, settings: Settings, cfg: dict, host: Host, store: Path, *, advisor: bool = False):
         """advisor=True — режим «поговорить и посоветовать»: только чтение (база знаний, файлы, статусы),
@@ -180,6 +198,7 @@ class Producer:
                    "на базу знаний и данные проекта. Ничего не меняй и не запускай; если нужна работа — предложи "
                    "поставить задачу команде (написать «сделай …»). Про ход текущих задач отвечай по строке "
                    "[сейчас в работе: …] в начале сообщения.\n" if self.advisor else "") + "\n"
+                f"{skills_note(self.root, p.get('skills') or [])}\n\n"
                 f"=== Инструкции проекта (CLAUDE.md) ===\n{rules}")
 
     def _load(self) -> dict:

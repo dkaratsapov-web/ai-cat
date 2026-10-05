@@ -44,7 +44,16 @@ class Bridge:
     def instructions(self) -> str:
         sp = (self.root / "prompts" / "system.md").read_text(encoding="utf-8")
         bible = (self.root / "prompts" / "character_bible.md").read_text(encoding="utf-8")
-        return f"{sp}\n\n{bible}"
+        extra = ""
+        try:
+            agents = yaml.safe_load((self.p.settings.root / "config" / "agents.yaml").read_text(encoding="utf-8"))
+            names = (agents.get("director") or {}).get("skills") or []
+            if names:
+                extra = ("\n\nТВОИ МЕТОДИКИ (фрагменты по теме приходят в разделе «БАЗА ЗНАНИЙ»): " + ", ".join(names) +
+                         ". Приёмы бери, проценты без источника не переноси.")
+        except (OSError, yaml.YAMLError):
+            pass
+        return f"{sp}\n\n{bible}{extra}"
 
     def _schema(self, kind: str) -> dict:
         return json.loads((self.root / "prompts" / "schemas" / f"{kind}.json").read_text(encoding="utf-8"))

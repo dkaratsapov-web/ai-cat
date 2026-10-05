@@ -24,6 +24,7 @@ DOC_EXT = {".docx"}
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 SOURCES = [   # (glob, раздел)
+    ("knowledge/skills/*", "методики (скиллы)"),
     ("knowledge/**/*", "материалы владельца"),
     (".claude/product-marketing-context.md", "бренд"),
     ("CLAUDE.md", "правила"),

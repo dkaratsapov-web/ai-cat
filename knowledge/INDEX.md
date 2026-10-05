@@ -1,6 +1,21 @@
 # База знаний и материалов — оглавление
 
-Собирается командой `studio kb index`. Всего: 20 документов, 43 картинок.
+Собирается командой `studio kb index`. Всего: 34 документов, 43 картинок.
+
+## методики (скиллы)
+- knowledge/skills/ad-creative.md — name: "ad-creative
+- knowledge/skills/campaign-analytics.md — name: "campaign-analytics
+- knowledge/skills/content-humanizer.md — name: "content-humanizer
+- knowledge/skills/content-strategy.md — name: "content-strategy
+- knowledge/skills/copy-editing.md — name: "copy-editing
+- knowledge/skills/copywriting.md — name: "copywriting
+- knowledge/skills/local-seo-manager.md — name: "local-seo-manager
+- knowledge/skills/marketing-ideas.md — name: "marketing-ideas
+- knowledge/skills/marketing-psychology.md — name: "marketing-psychology
+- knowledge/skills/paid-ads.md — name: "paid-ads
+- knowledge/skills/social-content.md — name: "social-content
+- knowledge/skills/social-media-manager.md — name: "social-media-manager
+- knowledge/skills/video-content-strategist.md — name: video-content-strategist
 
 ## материалы владельца
 - knowledge/README.md — База знаний и материалов
@@ -12,6 +27,7 @@
 - CLAUDE.md — Инструкции для Claude Code: производство роликов «МяуРкетинг»
 
 ## документы
+- docs/BOT.md — Telegram-бот и мини-приложение студии
 - docs/CONTENT-PLAN.md — Контент-план «МяуРкетинг»: 30 дней, 20 роликов
 - docs/IDEAS.md — Идеи и решения на будущее (договорённости с владельцем)
 - docs/INTEGRATIONS.md — Аудит интеграций (этап 1)
