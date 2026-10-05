@@ -43,7 +43,7 @@ scenes:
   duration: 5
   generator: kling
   reference: typing_evening
-  voiceover: Пятое — Яндекс Директ. Сильный, но в фитнесе всё решают локация и услуги.
+  voiceover: Пятое — Яндекс Директ. Сильный, но в фитнесе всё решает локация и услуги.
   visual: '[офис] Кот быстро печатает, смотрит аналитику'
   prompts:
     kling: The cat types quickly on the laptop keyboard, the screen flickers softly, steam rises from the coffee,
@@ -93,7 +93,7 @@ scenes:
       accent: '4'
 - id: s05
   type: character_motion
-  duration: 6
+  duration: 5
   generator: kling
   reference: fit_phone_mat
   voiceover: В городах от двухсот до пятисот тысяч работает неплохо — если есть живые районные сообщества.
@@ -167,7 +167,7 @@ scenes:
       accent: '2'
 - id: s09
   type: character_motion
-  duration: 6
+  duration: 5
   generator: kling
   reference: fit_logo
   voiceover: Карточка, отзывы, фото, акции и продвижение могут привести первых клиентов уже в первый месяц.
@@ -234,22 +234,12 @@ scenes:
       size: 48
       y: 480
     model: bytedance/seedance-2.0/image-to-video
-- id: s12
-  type: character_motion
-  duration: 3
-  generator: kling
-  reference: fit_phone_mat2
-  voiceover: В фитнесе покупают не только тренировку.
-  visual: '[студия] Кот на коврике со смартфоном'
-  prompts:
-    kling: The cat lies on the yoga mat holding the smartphone, looks at the camera and slightly tilts its head,
-      breathing calmly, ears stay folded, static camera
 - id: s13
   type: character_motion
-  duration: 4
+  duration: 5
   generator: higgsfield
   reference: fit_walk_low
-  voiceover: Покупают тренера, атмосферу и желание быть частью этого места.
+  voiceover: В фитнесе покупают не тренировку, а тренера, атмосферу и желание быть частью этого места.
   visual: '[студия] Кот крадётся к камере, арки'
   prompts:
     higgsfield: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow
@@ -287,6 +277,23 @@ scenes:
       y: 330
       accent: фитнес
     mode: pro
+- id: s15
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: fit_logo
+  voiceover: А девушек из Твери ждём в студии на Чернышевского, тридцать один.
+  subtitle: А девушек из Твери ждём в студии на Чернышевского, 31.
+  visual: '[студия] Кот у логотипа студии приглашающе машет лапой; адрес + пометка «Реклама»'
+  prompts:
+    kling: The cat stands near the glowing studio logo, makes a welcoming wave with its paw, then looks at the camera
+      and blinks, warm light breathes softly, ears stay folded, static camera
+  local:
+    overlays:
+    - text: Тверь, ул. Чернышевского, 31
+      at: чернышевского
+      size: 56
+      y: 250
 publication:
   titles:
   - ТОП-5 инструментов для продвижения фитнес-студии

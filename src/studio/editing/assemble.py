@@ -221,7 +221,11 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
         src = pingpong(src, project.dir("work") / f"{sc.id}.pingpong.mp4", project.settings)
     amb = ambient_config(project.settings, sc.local)
     live = bool(amb.get("enabled")) and sc.type in amb.get("apply_to", [])
-    overlays = sc.local.get("overlays") or []
+    overlays = list(sc.local.get("overlays") or [])
+    if sc.local.get("ad_label"):   # маркировка рекламы (закон «О рекламе», ст. 18.1) — на весь показ сцены
+        overlays.append({"text": sc.local["ad_label"], "style": "label"})
+        if "<" in sc.local["ad_label"]:
+            print(f"    ! {sc.id}: маркировка рекламы не заполнена (рекламодатель, erid) — публиковать нельзя")
     if live or overlays:
         # «Живой слой» (камера, свет, огоньки, пылинки) и надписи — поверх AI-клипа (бесплатно)
         base = normalize_clip(src, out.with_name(f"{sc.id}.base.mp4"), length, project.settings)

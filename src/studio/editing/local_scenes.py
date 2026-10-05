@@ -159,6 +159,16 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     for ov in overlays:
+        if ov.get("style") == "label":   # маркировка рекламы: мелко, но читаемо, весь показ сцены, без анимации
+            f = fonts.font(settings.fonts_dir, int(ov.get("size", 34)), bold=False)
+            lines = wrap(d, ov["text"], f, w - sa["left"] - sa["right"] - 32)
+            y0 = float(ov.get("y", sa["top"] - 120))
+            box_w = max(d.textlength(line, font=f) for line in lines) + 32
+            d.rounded_rectangle((sa["left"], y0, sa["left"] + box_w, y0 + 44 * len(lines) + 16), radius=12,
+                                fill=(14, 16, 22, 190))
+            for k, line in enumerate(lines):
+                d.text((sa["left"] + 16, y0 + 8 + 44 * k), line, font=f, fill=(255, 255, 255, 235))
+            continue
         at = float(ov.get("at", 0.0))
         until = ov.get("until")
         if t < at or (until is not None and t > float(until) + 0.3):

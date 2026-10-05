@@ -104,6 +104,17 @@ def run_qa(project: Project) -> Report:
     timeline_path = project.dir("output") / "timeline.json"
     timeline = json.loads(timeline_path.read_text(encoding="utf-8")) if timeline_path.exists() else []
 
+    # Маркировка рекламы: если в сцене есть рекламная интеграция, пометка должна быть заполнена
+    try:
+        for sc in project.load_script().scenes:
+            lab = sc.local.get("ad_label")
+            if lab:
+                rep.add("Маркировка рекламы", "fail" if "<" in lab else "pass",
+                        "заполните рекламодателя и erid (токен ОРД) — без этого публиковать нельзя" if "<" in lab
+                        else lab, scene=sc.id)
+    except Exception:  # noqa: BLE001
+        pass
+
     # Озвучка внутри сцен совпадает с длительностью сцен
     for it in timeline:
         ap = Path(it["audio"]) if it.get("audio") else project.scene_audio(it["scene"])
