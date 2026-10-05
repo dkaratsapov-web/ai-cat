@@ -7,7 +7,7 @@ idea: 'Кот «выезжает в поле»: офис (аналитика) ч
 audience: Владельцы фитнес-студий (в т.ч. женских), управляющие, тренеры, предприниматели в спорте и wellness
 problem: Непонятно, какие каналы продвижения работают для локальной фитнес-студии
 format: ТОП-5 обратным отсчётом, офис ↔ студия, каждая сцена — отдельный AI-клип 3–5 с
-target_duration: 90
+target_duration: 95
 tone: экспертно, динамично, с лёгкой иронией
 hook: Топ-пять инструментов для привлечения клиентов в фитнес-студию! Досмотрите до конца — первое место вас обязательно удивит!
 cta: Напишите «фитнес» — пришлю бесплатный чек-лист по запуску любой из перечисленных в ролике платформ и проконсультирую.
@@ -203,22 +203,24 @@ scenes:
     kling: The cat walks away from the camera under the aerial yoga hammocks, tail sways, the hammocks sway gently,
       ears stay folded, static camera
 - id: s06c
-  type: character_motion
-  duration: 5
-  generator: kling
-  reference: office_dashboard_point
+  type: screenshot
+  duration: 6.5
+  generator: local
   voiceover: Можно точно работать по географии — например, задать локацию один–два километра от локации студии.
   subtitle: Можно точно работать по географии — например, задать локацию 1–2 км от локации студии.
-  visual: '[офис] Кот показывает лапой на кабинет рекламы на мониторе — настройка гео'
-  prompts:
-    kling: The cat turns its head to the monitor and points at the advertising dashboard with its paw, studying it
-      closely, the monitor glows softly, steam rises from the coffee, ears stay folded, static camera
+  visual: '[макет VK] рекламная запись «рядом с домом»: телефон выпрыгивает, камера ныряет к гео и кнопке'
   local:
+    kind: phone
+    image: fitness_vk_ad.jpg
+    caption: Пример оформления
+    highlights:
+    - {box: [100, 365, 650, 80], at: географии, until: километра, zoom: 1.9}
+    - {box: [628, 1400, 200, 62], at: студии, zoom: 2.0}
     overlays:
     - style: note
       text: "Гео: 1–2 км от студии"
       accent: 1–2 км
-      at: например
+      at: километра
       size: 52
       y: 1080
 - id: s07
@@ -275,13 +277,16 @@ scenes:
   local:
     mode: pro
     transition: smoothleft
-    overlays:
-    - style: note
-      text: "Карточка · отзывы · фото\nакции · продвижение"
-      accent: карточка
-      at: 0.3
-      size: 46
-      y: 1120
+    cutaway:   # карточка Яндекс Карт: подсветка ровно под перечисление в озвучке
+      image: fitness_maps_card.jpg
+      from: карточка
+      caption: Пример оформления
+      highlights:
+      - {box: [120, 365, 710, 190], at: карточка, until: отзывы, zoom: 1.4}
+      - {box: [128, 460, 340, 44], at: отзывы, until: фотографии, zoom: 2.3}
+      - {box: [112, 748, 735, 285], at: фотографии, until: акции, zoom: 1.3}
+      - {box: [118, 1053, 705, 118], at: акции, until: платное, zoom: 1.6}
+      - {box: [118, 583, 705, 76], at: платное, zoom: 1.5}
 - id: s09b
   type: talking
   duration: 4
@@ -341,13 +346,13 @@ scenes:
     kling: The cat walks away, then looks back over its shoulder at the camera with a playful look, the neon arches
       glow steadily, ears stay folded, static camera
   local:
-    overlays:
-    - style: icons
-      y: 1020
-      items:
-      - image: instagram
-        label: Запретграмм
-        at: запретграмм
+    cutaway:
+      image: fitness_instagram.jpg
+      from: контент
+      caption: Пример оформления
+      highlights:
+      - {box: [600, 660, 225, 320], at: контент, until: качайте, zoom: 2.0}
+      - {box: [118, 655, 707, 650], at: качайте, zoom: 1.15}
 - id: s11
   type: character_motion
   duration: 3

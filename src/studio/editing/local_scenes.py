@@ -714,6 +714,8 @@ def render_local_scene(scene: Scene, project_path: Path, settings: Settings, out
         fn = screenshot_frames(Image.open(resolve_image(project_path, settings, scene.local["image"])), sc, settings)
     elif kind == "image":
         fn = kenburns_frames(Image.open(resolve_image(project_path, settings, scene.local["image"])), sc, settings)
+    elif kind == "phone":
+        fn = phone_frames(Image.open(resolve_image(project_path, settings, scene.local["image"])), sc.local, settings)
     elif kind == "character":
         if not character_image:
             raise LocalRenderError(f"{scene.id}: нет утверждённого референса персонажа")
@@ -721,3 +723,128 @@ def render_local_scene(scene: Scene, project_path: Path, settings: Settings, out
     else:
         raise LocalRenderError(f"{scene.id}: неизвестный local.kind '{kind}'")
     return write_frames(out, fn, dur, settings)
+
+
+# ---------------------------------------------------------------- телефон на весь экран (макет/скрин)
+
+def _ease_back(x: float) -> float:
+    """Выезд с лёгким «пружинящим» перелётом."""
+    x = max(0.0, min(1.0, x))
+    c1 = 1.4
+    return 1 + (c1 + 1) * (x - 1) ** 3 + c1 * (x - 1) ** 2
+
+
+def phone_frames(img: Image.Image, cfg: dict, settings: Settings, under: Image.Image | None = None) -> Frame:
+    """Скрин телефона во весь экран с анимацией.
+
+    0–0,6 с: телефон «выпрыгивает» поверх (размытого) последнего кадра с котом — масштаб 0,78→1, поворот −7°→0,
+    скругления уходят, экран раскрывается на весь кадр. Дальше камера плавно «ныряет» к областям highlights
+    (box в пикселях скрина или долях; at/until — секунды от начала вставки), рамка подсветки рисуется по контуру
+    и мягко пульсирует. caption — маленькая пометка (по правилу: макеты нейросети — только как «пример»).
+    cfg: {image, highlights: [{box, at, until, zoom: 1.7, label}], caption, overlays}
+    """
+    w, h = settings.get("video.width"), settings.get("video.height")
+    accent = hex_rgb(settings.get("branding.accent_color"))
+    src = redact_boxes(img.convert("RGB"), cfg.get("redact", []))
+    sw, sh = src.size
+    full = cover(src, w, h)                       # экран телефона на весь кадр
+    k = w / sw if sw / sh <= w / h else h / sh     # масштаб исходник → кадр (как у cover)
+    offx, offy = (sw * k - w) / 2, (sh * k - h) / 2
+    if under is not None:
+        bg = cover(under.convert("RGB"), w, h).filter(ImageFilter.GaussianBlur(16))
+    else:
+        bg = full.filter(ImageFilter.GaussianBlur(30))
+    bg = Image.blend(bg, Image.new("RGB", bg.size, (8, 9, 12)), 0.45)
+    hls = []
+    for hl in cfg.get("highlights", []) or []:
+        bx, by, bw, bh = to_px(hl["box"], sw, sh)
+        # в координаты кадра (до зума)
+        hls.append({**hl, "rect": (bx * k - offx, by * k - offy, bw * k, bh * k),
+                    "at": float(hl.get("at", 0.8)), "until": hl.get("until")})
+    hls.sort(key=lambda x: x["at"])
+    t_in = 0.6
+    lab_f = fonts.font(settings.fonts_dir, 40)
+    cap_f = fonts.font(settings.fonts_dir, 30, bold=False)
+
+    def camera(t: float) -> tuple[float, float, float]:
+        """(зум, центр x, центр y) в координатах кадра; между ключами — плавный переход 0,5 с."""
+        keys = [(0.0, 1.0, w / 2, h / 2)]
+        for hl in hls:
+            if hl.get("zoom", 1.6) and float(hl.get("zoom", 1.6)) > 1.0:
+                x, y, bw, bh = hl["rect"]
+                z = float(hl.get("zoom", 1.6))
+                z = min(z, 0.92 * w / max(bw, 1), 0.92 * h / max(bh, 1)) if hl.get("fit", True) else z
+                keys.append((hl["at"], max(1.0, z), x + bw / 2, y + bh / 2))
+                if hl.get("until") is not None:
+                    keys.append((float(hl["until"]), 1.0, w / 2, h / 2))
+        keys.sort(key=lambda x: x[0])
+        cur = keys[0][1:]
+        for key in keys[1:]:
+            if t >= key[0]:
+                p = ease_io(min(1.0, (t - key[0]) / 0.5))
+                cur = tuple(a + (b - a) * p for a, b in zip(cur, key[1:]))
+        return cur
+
+    def frame(t: float) -> Image.Image:
+        z, cx, cy = camera(t)
+        z *= 1 + 0.012 * math.sin(t * 1.3)            # лёгкое «дыхание» камеры
+        vw, vh = w / z, h / z
+        x0 = min(max(cx - vw / 2, 0), w - vw)
+        y0 = min(max(cy - vh / 2, 0), h - vh)
+        view = full.crop((round(x0), round(y0), round(x0 + vw), round(y0 + vh))).resize((w, h), Image.BICUBIC)
+        layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        for hl in hls:
+            if t < hl["at"] or (hl["until"] is not None and t > float(hl["until"]) + 0.3):
+                continue
+            rx, ry, rw, rh = hl["rect"]
+            X0, Y0 = (rx - x0) * z, (ry - y0) * z
+            X1, Y1 = X0 + rw * z, Y0 + rh * z
+            pad = 10
+            X0, Y0, X1, Y1 = X0 - pad, Y0 - pad, X1 + pad, Y1 + pad
+            p = ease_out((t - hl["at"]) / 0.35)
+            fade = 1.0 if hl["until"] is None or t <= float(hl["until"]) else 1 - (t - float(hl["until"])) / 0.3
+            pulse = 0.5 + 0.5 * math.sin((t - hl["at"]) * 5)
+            d.rounded_rectangle((X0, Y0, X1, Y1), radius=18, fill=(*accent, int((24 + 18 * pulse) * fade * p)))
+            # контур рисуется по периметру: верх → право → низ → лево
+            per = 2 * ((X1 - X0) + (Y1 - Y0))
+            left = per * p
+            col = (*accent, int(255 * fade))
+            for (a, b) in (((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))):
+                seg = math.dist(a, b)
+                if left <= 0:
+                    break
+                f = min(1.0, left / seg)
+                d.line((a, (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)), fill=col, width=7)
+                left -= seg
+            if hl.get("label") and p > 0.6:
+                tw = d.textlength(hl["label"], font=lab_f)
+                lx = min(max(X0, 30), w - tw - 60)
+                ly = Y1 + 14 if Y1 + 80 < h - 420 else Y0 - 74
+                d.rounded_rectangle((lx, ly, lx + tw + 36, ly + 60), radius=30, fill=(*accent, int(240 * fade)))
+                d.text((lx + 18, ly + 8), hl["label"], font=lab_f, fill=(20, 20, 20, int(255 * fade)))
+        if cfg.get("caption"):
+            cap = cfg["caption"]
+            tw = d.textlength(cap, font=cap_f)
+            d.rounded_rectangle((30, 96, 30 + tw + 28, 96 + 44), radius=22, fill=(14, 16, 22, 170))
+            d.text((44, 100), cap, font=cap_f, fill=(255, 255, 255, 220))
+        out = view.convert("RGBA")
+        out.alpha_composite(layer)
+        if cfg.get("overlays"):
+            out = draw_overlays(out.convert("RGB"), settings, cfg["overlays"], t).convert("RGBA")
+        if t < t_in:   # «выпрыгивание» телефона поверх кадра с котом
+            p = _ease_back(t / t_in)
+            s = 0.78 + 0.22 * p
+            rot = -7 * (1 - min(1.0, p))
+            pw, ph = int(w * s), int(h * s)
+            ph_img = out.resize((pw, ph), Image.BICUBIC)
+            m = Image.new("L", (pw, ph), 0)
+            ImageDraw.Draw(m).rounded_rectangle((0, 0, pw - 1, ph - 1), radius=int(70 * (1 - min(1.0, p)) + 1), fill=255)
+            ph_img.putalpha(m)
+            ph_img = ph_img.rotate(rot, resample=Image.BICUBIC, expand=True)
+            canvas = bg.copy().convert("RGBA")
+            dy = int(160 * (1 - min(1.0, p)))
+            canvas.alpha_composite(ph_img, ((w - ph_img.width) // 2, (h - ph_img.height) // 2 + dy))
+            return canvas.convert("RGB")
+        return out.convert("RGB")
+    return frame

@@ -181,6 +181,19 @@ def resolve_local(scene: Scene, meta: dict | None) -> Scene:
                              for hl in loc["highlights"]]
     if loc.get("bullet_at"):
         loc["bullet_at"] = [anchor_time(x, words, 0.3 + i) for i, x in enumerate(loc["bullet_at"])]
+    if loc.get("kind") == "phone" and loc.get("highlights"):
+        loc["highlights"] = [{**hl, "at": anchor_time(hl.get("at"), words),
+                              **({"until": anchor_time(hl["until"], words)} if hl.get("until") is not None else {})}
+                             for hl in loc["highlights"]]
+    if loc.get("cutaway"):
+        # вставка внутри сцены: время слов → секунды от начала вставки
+        cw = dict(loc["cutaway"])
+        t0 = anchor_time(cw.get("from", 0.0), words, 0.0)
+        cw["t0"] = t0
+        cw["highlights"] = [{**hl, "at": max(0.0, anchor_time(hl.get("at"), words) - t0),
+                             **({"until": max(0.0, anchor_time(hl["until"], words) - t0)}
+                                if hl.get("until") is not None else {})} for hl in cw.get("highlights") or []]
+        loc["cutaway"] = cw
     if loc.get("overlays"):
         loc["overlays"] = [{**o, "at": anchor_time(o.get("at", 0.0), words, 0.0),
                             **({"until": anchor_time(o["until"], words)} if o.get("until") is not None else {}),
@@ -211,6 +224,9 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
             except CharacterError as e:
                 raise AssemblyError(str(e)) from e
         return render_local_scene(sc, project.path, project.settings, out, character_image=char_img, duration=length)
+    cw = sc.local.get("cutaway")
+    if cw and 0.2 < float(cw.get("t0", 0)) < length - 0.5:
+        return _with_cutaway(project, item, sc, length, lib, cw, out)
     src = project.scene_source(sc.id)
     if not src:
         hint = (f"studio scene import {project.id} {sc.id} <файл.mp4>" if sc.generator == "manual"
@@ -242,6 +258,31 @@ def scene_clip(project: Project, item: TimelineItem, length: float, lib: Charact
         return apply_ambient(base, out, length, project.settings, {**amb, "enabled": live}, seed=sc.id,
                              progress=sc.id, overlays=overlays)
     return normalize_clip(src, out, length, project.settings)
+
+
+def _with_cutaway(project: Project, item: TimelineItem, sc: Scene, length: float, lib: CharacterLibrary,
+                  cw: dict, out: Path) -> Path:
+    """Сцена с котом до слова cutaway.from, дальше — скрин телефона во весь экран (выпрыгивает поверх кадра)."""
+    from PIL import Image
+
+    from .local_scenes import phone_frames, resolve_image, write_frames
+    t0 = float(cw["t0"])
+    head_sc = Scene(**{**sc.__dict__, "local": {k: v for k, v in sc.local.items() if k != "cutaway"}})
+    head_item = TimelineItem(**{**item.__dict__, "scene": head_sc})
+    work = project.dir("work")
+    head = scene_clip(project, head_item, t0, lib)
+    head = Path(head).rename(work / f"{sc.id}.head.mp4") if Path(head) == out else Path(head)
+    last = work / f"{sc.id}.last.png"
+    ffmpeg.run(["ffmpeg", "-sseof", "-0.1", "-i", head, "-frames:v", "1", "-update", "1", last])
+    img = Image.open(resolve_image(project.path, project.settings, cw["image"]))
+    tail = write_frames(work / f"{sc.id}.phone.mp4",
+                        phone_frames(img, cw, project.settings, under=Image.open(last)), length - t0, project.settings)
+    st = project.settings
+    ffmpeg.run(["ffmpeg", "-i", head, "-i", tail, "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]",
+                "-c:v", st.get("video.codec", "libx264"), "-preset", "veryfast", "-crf", str(st.get("video.crf", 18)),
+                "-pix_fmt", "yuv420p", "-r", str(st.get("video.fps")), out])
+    print(f"    вставка скрина {cw['image']} с {t0:.2f} с", flush=True)
+    return out
 
 
 def slow_clip(src: Path, out: Path, factor: float, settings: Settings) -> Path:
