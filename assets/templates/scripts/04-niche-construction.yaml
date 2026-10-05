@@ -1,0 +1,133 @@
+id: template
+title: Почему строительной компании приходят заявки, которые не строят
+content_type: expert
+topic: Нишевый разбор — реклама строительства частных домов в Яндекс Директе
+idea: Три настройки, из-за которых стройка получает много пустых заявок, и как их исправить
+audience: Владельцы и руководители компаний, которые строят частные дома и запускают рекламу
+problem: Заявки есть, но это студенты, «самостройщики» и люди из других регионов — договоров нет
+format: 'Нишевый разбор: кот-эксперт, три ошибки карточками, место под кейс владельца'
+target_duration: 40
+tone: уверенно, по делу, с лёгкой иронией
+hook: Строите дома, а заявки — пустые?
+cta: Строите дома? Пишите «стройка» в комментариях — разберу вашу рекламу.
+voice_preset: default
+disclaimer: ''
+scenes:
+- id: s01
+  type: talking
+  duration: 3.5
+  generator: kling
+  reference: chair_boss
+  voiceover: Строите дома, а заявки — пустые? Смотрите, где ошибка.
+  visual: Кот-босс в кресле смотрит в камеру
+  prompts:
+    kling: The cat talks to the camera with a confident, slightly ironic look, leans forward a little, blinks,
+      office lights shimmer softly in the background, ears stay folded, static camera
+  local:
+    ambient: {zoom: 0.09}
+    overlays:
+    - {text: 'Заявки есть, а договоров нет?', accent: договоров нет, at: 0.1, size: 76, y: 250}
+- id: s02
+  type: character_motion
+  duration: 4
+  generator: kling
+  reference: facepalm
+  voiceover: Первая ошибка — реклама по запросам «своими руками».
+  visual: Кот закрывает мордочку лапой — «ну как так»
+  animation: Кот медленно проводит лапой по мордочке и качает головой, на фоне мерцают мониторы
+  prompts:
+    kling: The cat slowly drags its paw down over its face in disappointment and shakes its head slightly,
+      monitors flicker softly in the background, steam rises from a coffee cup, slight camera push-in, ears
+      stay folded, static camera
+- id: s03
+  type: infographic
+  duration: 7
+  generator: local
+  voiceover: Проекты бесплатно, дом своими руками, вакансии строителей. Это не ваши клиенты — в минус-слова.
+  visual: Карточка «Мусорные запросы стройки»
+  local:
+    kind: card
+    title: '№1 Мусорные запросы'
+    reveal: single
+    bullet_at: [проекты, вакансии, минус]
+    bullets:
+    - '«проекты бесплатно», «скачать»'
+    - '«своими руками», «вакансии»'
+    - Всё это — в минус-слова
+- id: s04
+  type: infographic
+  duration: 7
+  generator: local
+  voiceover: Вторая — широкая география. Строите в своём регионе — там и показывайтесь. А в объявлении
+    прямо укажите, где строите.
+  visual: Карточка «География»
+  local:
+    kind: card
+    title: '№2 География'
+    reveal: single
+    bullet_at: [строите, объявлении]
+    bullets:
+    - Показы — только там, где строите
+    - Регион строительства — прямо в объявлении
+- id: s05
+  type: infographic
+  duration: 9
+  generator: local
+  voiceover: Третья — форма «оставьте заявку». Дом за минуту не продают. Дайте квиз — проект, площадь,
+    участок, сроки — и смету в ответ.
+  visual: Карточка «Квиз вместо формы»
+  local:
+    kind: card
+    title: '№3 Квиз вместо формы'
+    reveal: single
+    bullet_at: [форма, квиз]
+    bullets:
+    - '«Оставьте заявку» — дом так не покупают'
+    - 'Квиз: проект, площадь, участок, сроки → смета'
+- id: s06
+  type: infographic
+  duration: 6
+  generator: local
+  voiceover: Вопросы про участок и бюджет отсеют случайных. Заявок может стать меньше, зато с ними можно
+    работать.
+  visual: Карточка-итог
+  local:
+    kind: card
+    title: Фильтр в квизе
+    reveal: single
+    bullet_at: [участок, заявок]
+    bullets:
+    - Есть ли участок? Какой бюджет?
+    - Меньше заявок, но с ними можно работать
+- id: s07
+  type: talking
+  duration: 4.5
+  generator: kling
+  reference: pointing_viewer
+  voiceover: Строите дома? Пишите «стройка» в комментариях — разберу вашу рекламу.
+  visual: Кот указывает лапой на зрителя
+  prompts:
+    kling: The cat points its paw at the viewer and talks with a friendly, confident expression, nods at the
+      end, blinks, office lights shimmer in the background, ears stay folded, static camera
+  local:
+    min_duration: 5
+    overlays:
+    - {text: Пишите в комментариях, at: пишите, size: 56, y: 240}
+    - {text: '«СТРОЙКА»', accent: стройка, at: стройка, size: 120, y: 352}
+publication:
+  titles:
+  - Почему строительной компании приходят пустые заявки
+  - 3 ошибки рекламы строительной компании в Директе
+  cover_titles:
+  - Заявки есть, договоров нет?
+  - Реклама стройки
+  cover_time: 1.0
+  description: 'Три настройки рекламы для строительства домов: минус-слова для «своими руками» и «проекты
+    бесплатно», география показов и квиз со сметой вместо формы «оставьте заявку».'
+  hashtags:
+  - яндексдирект
+  - строительстводомов
+  - рекламастройки
+  - квиз
+  - маркетинг
+  - мяуркетинг
