@@ -279,6 +279,8 @@ def transition_name(prev: Scene, nxt: Scene, settings: Settings, available: set[
     rules = {"default": "fade", "video_to_local": "zoomin", "local_to_local": "smoothleft",
              "to_card": "smoothup", "to_video": "fade", **(settings.get("video.transitions") or {})}
     name = nxt.local.get("transition")
+    if name == "cut":   # чистая склейка без наплыва (например, вход в CTA)
+        return "cut"
     if not name:
         prev_local, next_local = prev.generator == "local", nxt.generator == "local"
         if not next_local:
@@ -314,7 +316,10 @@ def concat_video(clips: list[Path], lengths: list[float], out: Path, settings: S
         offset += lengths[i - 1]
         label = f"[v{i}]"
         kind = transition_name(scenes[i - 1], scenes[i], settings, available) if scenes else "fade"
-        chain.append(f"{prev}[{i}:v]xfade=transition={kind}:duration={d}:offset={offset:.3f}{label}")
+        dur = d
+        if kind == "cut":   # склейка: наплыв в 1 кадр, смещение то же — синхрон с озвучкой сохраняется
+            kind, dur = "fade", 0.034
+        chain.append(f"{prev}[{i}:v]xfade=transition={kind}:duration={dur}:offset={offset:.3f}{label}")
         prev = label
     args += ["-filter_complex", ";".join(chain), "-map", prev, "-c:v", settings.get("video.codec"),
              "-preset", "veryfast", "-crf", str(settings.get("video.crf", 18)), "-pix_fmt", "yuv420p", out]

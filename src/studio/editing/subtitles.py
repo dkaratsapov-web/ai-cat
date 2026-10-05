@@ -27,7 +27,8 @@ def chunk_words(words: list[str], max_words: int, max_chars: int) -> list[list[i
     cur_len = 0
     for i, w in enumerate(words):
         add = len(w) + (1 if cur else 0)
-        if cur and (len(cur) >= max_words or cur_len + add > max_chars):
+        real = sum(1 for k in cur if re.search(r"\w", words[k]))   # тире и знаки — не слова
+        if cur and (real >= max_words or cur_len + add > max_chars):
             groups.append(cur)
             cur, cur_len, add = [], 0, len(w)
         cur.append(i)
@@ -68,6 +69,23 @@ def scene_cues(scene_id: str, text: str, start: float, voice_meta: dict | None, 
         b = timings[g[-1]][1]
         cues.append(Cue(start=round(start + a, 3), end=round(start + max(b, a + 0.35), 3),
                         text=" ".join(words[i] for i in g), scene_id=scene_id))
+    # Короткая фраза (одно слово на долю секунды, как «геосервисы» за 0.17 с) не читается — склеиваем с соседней
+    min_show = 0.7
+    i = 0
+    while len(cues) > 1 and i < len(cues):
+        c = cues[i]
+        if c.end - c.start >= min_show:
+            i += 1
+            continue
+        j = i - 1 if i > 0 else i + 1
+        a, b = (cues[j], c) if j < i else (c, cues[j])
+        merged = Cue(start=a.start, end=b.end, text=f"{a.text} {b.text}", scene_id=scene_id)
+        if len(merged.text) > max_chars * 2 + 4 and j < i and i + 1 < len(cues):   # в 2 строки не влезает — к следующей
+            a, b = c, cues[i + 1]
+            merged, j = Cue(start=a.start, end=b.end, text=f"{a.text} {b.text}", scene_id=scene_id), i + 1
+        lo = min(i, j)
+        cues[lo:lo + 2] = [merged]
+        i = max(lo - 1, 0)
     # Без «дыр» между соседними фразами внутри сцены: держим фразу до начала следующей
     for i in range(len(cues) - 1):
         if cues[i + 1].start - cues[i].end < 0.4:

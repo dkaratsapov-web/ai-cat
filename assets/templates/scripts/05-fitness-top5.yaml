@@ -1,3 +1,4 @@
+# v3 — по аудиту директора: плашки-смыслы (note), перекат цифр рейтинга, читаемые субтитры, чистый вход в CTA.
 id: template
 title: ТОП-5 инструментов для продвижения фитнес-студии
 content_type: expert
@@ -27,18 +28,26 @@ scenes:
   local:
     ambient:
       zoom: 0.09
-    overlays:
+    overlays:   # v3 (директор): ТОП-5 меньше и ниже — морда свободна; по одной плашке за раз
     - style: hero
       text: ТОП-5
       accent: топ-5
       at: 0.1
-      size: 150
-      y: 960
+      until: первое
+      size: 110
+      y: 1050
     - style: hero
       text: ПРОДВИЖЕНИЯ ФИТНЕС-СТУДИИ
       at: 0.35
-      size: 54
-      y: 1140
+      until: первое
+      size: 48
+      y: 1175
+    - style: note
+      text: №1 — не реклама
+      accent: не реклама
+      at: первое
+      size: 52
+      y: 1090
     mode: pro
 - id: s02
   type: character_motion
@@ -74,6 +83,13 @@ scenes:
   local:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
+    overlays:
+    - style: note
+      text: "Есть спрос — работает.\nНет спроса — бюджет сгорает"
+      accent: сгорает
+      at: 0.3
+      size: 46
+      y: 1080
 - id: s04
   type: character_motion
   duration: 2
@@ -88,6 +104,7 @@ scenes:
     overlays:
     - style: rank
       rank: 4
+      roll_from: 5
       text: Telegram Ads
       at: телеграм
       y: 1070
@@ -107,6 +124,13 @@ scenes:
   subtitle: В городах на 200–500 тысяч работает, если есть районные сообщества.
   local:
     transition: smoothleft
+    overlays:
+    - style: note
+      text: "200–500 тыс.\n+ районные сообщества"
+      accent: районные сообщества
+      at: городах
+      size: 48
+      y: 1080
 - id: s06
   type: character_motion
   duration: 4.2
@@ -121,6 +145,7 @@ scenes:
     overlays:
     - style: rank
       rank: 3
+      roll_from: 4
       text: VK Ads
       at: вэка
       y: 1070
@@ -142,6 +167,13 @@ scenes:
   local:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
+    overlays:
+    - style: note
+      text: "VK — стабильный\nлокальный канал"
+      accent: стабильный
+      at: 0.3
+      size: 48
+      y: 1080
   subtitle: И VK часто остаётся доступным, когда проблемы со связью.
 - id: s08
   type: character_motion
@@ -157,6 +189,7 @@ scenes:
     overlays:
     - style: rank
       rank: 2
+      roll_from: 3
       text: Карты и геосервисы
       at: карты
       y: 1070
@@ -204,9 +237,13 @@ scenes:
     overlays:
     - style: rank
       rank: 1
-      text: SMM + соцсети
+      roll_from: 2
+      text: SMM
+      size: 60
       at: эсэмэм
       y: 1070
+    ambient:
+      zoom: 0.12
 - id: s11
   type: character_motion
   duration: 3
@@ -238,6 +275,12 @@ scenes:
         label: MAX
         at: макс
       gap: 40
+    - style: note
+      text: SMM = регулярное доверие
+      accent: доверие
+      at: макс
+      size: 42
+      y: 1250
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
 - id: s13
@@ -255,6 +298,15 @@ scenes:
   local:
     model: bytedance/seedance-2.0/image-to-video
     transition: smoothleft
+    ambient:
+      zoom: 0.12
+    overlays:   # кульминация
+    - style: note
+      text: "Покупают не абонемент,\nа атмосферу"
+      accent: атмосферу
+      at: покупают
+      size: 56
+      y: 1060
 - id: s14
   type: talking
   duration: 3.3
@@ -281,7 +333,7 @@ scenes:
       size: 150
       y: 960
     mode: pro
-    transition: zoomin
+    transition: cut   # v3: без мутного наплыва — CTA начинается с чистого кадра
 publication:
   titles:
   - ТОП-5 инструментов для продвижения фитнес-студии

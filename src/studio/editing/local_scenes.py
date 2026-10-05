@@ -160,7 +160,7 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
     d = ImageDraw.Draw(layer)
     for ov in overlays:
         style = ov.get("style")
-        if style in ("rank", "hero", "icons"):
+        if style in ("rank", "hero", "icons", "note"):
             _draw_styled(layer, settings, ov, t)
             continue
         if style == "label":   # маркировка рекламы: мелко, но читаемо, весь показ сцены, без анимации
@@ -262,10 +262,37 @@ def _draw_styled(layer: Image.Image, settings: Settings, ov: dict, t: float) -> 
             x += slot
         return
     at = float(ov.get("at", 0.0))
-    if t < at:
+    until = ov.get("until")
+    if t < at or (until is not None and t > float(until) + 0.3):
         return
     p = ease_out((t - at) / float(ov.get("fade", 0.4)))
+    if until is not None and t > float(until):          # плавный уход, чтобы освободить место следующей плашке
+        p *= 1 - ease_out((t - float(until)) / 0.3)
     a = int(255 * p)
+    if style == "note":
+        # смысловая плашка в фирменном стиле рейтинга: тёмная подложка + жёлтая полоса, 1–2 строки по центру
+        f = fonts.font(settings.fonts_dir, int(ov.get("size", 50)))
+        lines = [ln for part in str(ov["text"]).split("\n") for ln in wrap(d, part.strip(), f, w - 2 * sa["left"] - 70)]
+        lh = int(f.size * 1.18)
+        bw = max(d.textlength(line, font=f) for line in lines) + 70
+        bh = lh * len(lines) + 34
+        x0 = (w - bw) / 2
+        y0 = float(ov.get("y", 1080)) + (1 - p) * 26
+        plate = Image.new("RGBA", layer.size, (0, 0, 0, 0))
+        pd = ImageDraw.Draw(plate)
+        pd.rounded_rectangle((x0, y0, x0 + bw, y0 + bh), radius=24, fill=(14, 16, 22, 225),
+                             outline=(255, 255, 255, 46), width=2)
+        pd.rounded_rectangle((x0, y0, x0 + 12, y0 + bh), radius=6, fill=(*accent, 255))
+        hl = str(ov.get("accent", "")).lower().split()
+        for k, line in enumerate(lines):
+            xx = x0 + 12 + (bw - 12 - d.textlength(line, font=f)) / 2
+            for word in line.split(" "):
+                plain = word.strip("«»\"'.,!?:;—").lower()
+                pd.text((xx, y0 + 17 + lh * k), word, font=f, fill=(*(accent if plain and plain in hl else (255, 255, 255)), 255))
+                xx += d.textlength(word + " ", font=f)
+        plate.putalpha(plate.getchannel("A").point(lambda v, k=p: int(v * k)))
+        layer.alpha_composite(plate)
+        return
     if style == "hero":
         size = int(ov.get("size", 110))
         f = fonts.font(settings.fonts_dir, size)
@@ -300,9 +327,16 @@ def _draw_styled(layer: Image.Image, settings: Settings, ov: dict, t: float) -> 
                          outline=(255, 255, 255, 46), width=2)
     pd.rounded_rectangle((x0, y0, x0 + hgt, y0 + hgt), radius=26, fill=(*accent, 255))
     num = str(ov.get("rank", ""))
-    nw = pd.textlength(num, font=num_f)
-    nb = pd.textbbox((0, 0), num, font=num_f)
-    pd.text((x0 + (hgt - nw) / 2, y0 + (hgt - (nb[3] - nb[1])) / 2 - nb[1]), num, font=num_f, fill=(20, 20, 20, 255))
+    roll_from = ov.get("roll_from")
+    roll = ease_out((t - at) / 0.55) if roll_from is not None else 1.0
+    # фирменный переход рейтинга: прошлая цифра уезжает вверх, новая приходит снизу (внутри жёлтого квадрата)
+    sq = Image.new("RGBA", (hgt, hgt), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sq)
+    for val, dy in ((str(roll_from), -roll * hgt), (num, (1 - roll) * hgt)) if roll < 1 else ((num, 0.0),):
+        nw = sd.textlength(val, font=num_f)
+        nb = sd.textbbox((0, 0), val, font=num_f)
+        sd.text(((hgt - nw) / 2, (hgt - (nb[3] - nb[1])) / 2 - nb[1] + dy), val, font=num_f, fill=(20, 20, 20, 255))
+    plate.alpha_composite(sq, (int(x0), int(y0)))
     xx = x0 + hgt + 24
     for lg in logos:
         plate.alpha_composite(lg, (int(xx), int(y0 + (hgt - lg.height) / 2)))
