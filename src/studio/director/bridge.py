@@ -104,6 +104,37 @@ class Bridge:
             f.write(f"{rec['at']} {self.p.id} {kind} {scene or '-'} {self.mode} {resp.get('id')} {data.get('status')}\n")
         return data
 
+    def ask(self, question: str) -> str | None:
+        """Свободный вопрос владельца директору в той же переписке эпизода. Ответ — обычный текст."""
+        from . import chat
+        chat.append(self.p, "owner", question)
+        conv = self._conv()
+        statuses = {sid: {"status": x.get("status"), "v": x.get("versions", 0),
+                          "director": (x.get("director") or {}).get("status"),
+                          "qc": (x.get("identity_qc") or {}).get("verdict")} for sid, x in state.load(self.p).items()}
+        text = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nОтветь по-русски, коротко и по делу. Если предлагаешь платное "
+                f"действие — так и скажи, решает владелец.\n\nСТАТУСЫ СЦЕН:\n```json\n"
+                f"{json.dumps(statuses, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{self._notes()}")
+        body = {"model": self.cfg["model"], "instructions": self.instructions(),
+                "input": [{"role": "user", "content": [{"type": "input_text", "text": text}]}],
+                "store": bool(self.cfg.get("store", True)), "max_output_tokens": int(self.cfg.get("max_output_tokens", 4000))}
+        if self.mode == "openai" and conv.get("last_response_id"):
+            body["previous_response_id"] = conv["last_response_id"]
+        try:
+            resp = self.client.send(body)
+        except DirectorUnavailable as e:
+            print(f"Директор недоступен: {e}")
+            return None
+        answer = output_text(resp).strip()
+        chat.append(self.p, "director", answer + (" (заглушка)" if self.mode == "mock" else ""),
+                    response_id=resp.get("id"))
+        if self.mode == "openai":
+            conv["last_response_id"] = resp.get("id")
+        conv["history"].append({"kind": "ask", "scene": "", "response_id": resp.get("id"), "at": _now(), "mode": self.mode})
+        self._conv_path().parent.mkdir(parents=True, exist_ok=True)
+        self._conv_path().write_text(json.dumps(conv, ensure_ascii=False, indent=1), encoding="utf-8")
+        return answer
+
     def _manual_hint(self, package: Path, kind: str, scene: str) -> None:
         if kind == "scene_review" and scene:
             st = state.load(self.p).get(scene, {})
@@ -292,6 +323,10 @@ def import_review(project: Project, db: DB, target: str, file: Path) -> dict:
     if "```json" in raw:
         raw = raw.split("```json", 1)[1].split("```", 1)[0]
     data = json.loads(raw)
+    from . import chat
+    chat.append(project, "director", "[ручной ответ из ChatGPT]\n" + chat._review_text(
+        "script_review" if target == "script" else ("final_review" if target == "final" else "scene_review"),
+        target, data), scene=target if target not in ("script", "final") else "")
     b = Bridge(project, db, mode="manual")
     if target == "script":
         b._write_md("latest_review.md", "Script review (manual)", data)

@@ -610,12 +610,31 @@ def cmd_director(a, s):
         br.export_final_package(proj, db, pkg, Path(a.video) if a.video else proj.final_video)
         print(f"Review-пакет: {pkg}")
         return 0
+    if a.action == "chat":
+        from .director import chat
+        out = chat.render(proj, db)
+        print(f"Чат эпизода: {out}")
+        if a.open:
+            import webbrowser
+            webbrowser.open(out.resolve().as_uri())
+        return 0
+    if a.action == "ask" and not a.scene:
+        raise ProjectError(f'Напишите вопрос: studio director ask {proj.id} "текст вопроса"')
+    if mode == "manual" and a.action == "ask":
+        raise ProjectError("Вопрос без OpenAI не отправить — задайте его в ChatGPT вручную")
     if mode == "openai" and not a.yes:
         ok = input("Запрос к OpenAI платный (обычно центы; цена — в кабинете OpenAI). Отправить? [да/нет]: ")
         if ok.strip().lower() not in ("да", "y", "yes", "д"):
             print("Отменено.")
             return 0
     b = br.Bridge(proj, db, mode=mode)
+    if a.action == "ask":
+        ans = b.ask(a.scene)
+        if ans:
+            print(f"Директор:\n{ans}")
+        from .director import chat
+        print(f"Чат эпизода: {chat.render(proj, db)}")
+        return 0
     if a.action == "review":
         data = b.script_review()
     elif a.action == "review-scene":
@@ -624,6 +643,8 @@ def cmd_director(a, s):
         data = b.scene_review(a.scene)
     else:
         data = b.final_review(Path(a.video) if a.video else None)
+    from .director import chat
+    chat.render(proj, db)
     if data:
         print(f"Директор: {data.get('status')}" + (f", оценка {data['final_score']}" if "final_score" in data else ""))
         print(f"  Ответ: {proj.path / 'director' / 'latest_review.md'}")
@@ -874,11 +895,12 @@ def build_parser() -> argparse.ArgumentParser:
     asp.add_argument("--export", action="store_true", help="записать assets/approved/index.yaml")
     asp.set_defaults(fn=cmd_assets)
 
-    dr = sub.add_parser("director", help="Director Bridge (OpenAI): ping | review | review-scene | review-final | sync | status | export-review-package")
-    dr.add_argument("action", choices=["ping", "review", "review-scene", "review-final", "sync", "status",
+    dr = sub.add_parser("director", help="Director Bridge (OpenAI): ping | chat | ask | review | review-scene | review-final | sync | status | export-review-package")
+    dr.add_argument("action", choices=["ping", "chat", "ask", "review", "review-scene", "review-final", "sync", "status",
                                        "export-review-package"])
     dr.add_argument("episode", nargs="?")
-    dr.add_argument("scene", nargs="?")
+    dr.add_argument("scene", nargs="?", help="сцена (review-scene) или текст вопроса (ask)")
+    dr.add_argument("--open", action="store_true", help="(chat) открыть в браузере")
     dr.add_argument("--mock", action="store_true", help="dry-run: ответ-заглушка, без OpenAI и без денег")
     dr.add_argument("--manual", action="store_true", help="только пакет для ручного ревью в ChatGPT")
     dr.add_argument("--video", help="ролик для финального ревью (по умолчанию финальный)")

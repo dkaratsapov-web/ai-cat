@@ -591,3 +591,14 @@ def test_director_ping_without_key(settings, monkeypatch, capsys):
     rc = cli._director_ping(type("A", (), {"yes": True})(), settings)
     assert rc == 1
     assert "OPENAI_API_KEY" in capsys.readouterr().out
+
+
+def test_director_chat_render(settings):
+    from studio.director import chat
+    from studio.project import create_project
+    project = create_project(template(), settings)
+    chat.append(project, "owner", "вопрос <b>")
+    chat.append(project, "director", "ответ")
+    out = chat.render(project)
+    page = out.read_text(encoding="utf-8")
+    assert "вопрос &lt;b&gt;" in page and 'class="msg director"' in page

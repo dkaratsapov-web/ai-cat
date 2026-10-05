@@ -123,6 +123,10 @@ class MockDirector:
         return True, "mock (dry-run)"
 
     def send(self, body: dict) -> dict:
+        if "text" not in body:   # свободный вопрос (studio director ask)
+            ans = "[MOCK] Понял вопрос. Рекомендую сначала проверить одну сцену, платное — только после вашего «утверждаю»."
+            return {"id": "mock_ask", "status": "completed", "model": "mock",
+                    "output": [{"type": "message", "content": [{"type": "output_text", "text": ans}]}], "usage": {}}
         name = body["text"]["format"]["name"]
         text = body["input"][0]["content"][0]["text"]
         meta = json.loads(text.split("```json", 1)[1].split("```", 1)[0]) if "```json" in text else {}
