@@ -104,10 +104,11 @@ class Bridge:
             f.write(f"{rec['at']} {self.p.id} {kind} {scene or '-'} {self.mode} {resp.get('id')} {data.get('status')}\n")
         return data
 
-    def ask(self, question: str) -> str | None:
+    def ask(self, question: str, *, log_question: bool = True) -> str | None:
         """Свободный вопрос владельца директору в той же переписке эпизода. Ответ — обычный текст."""
         from . import chat
-        chat.append(self.p, "owner", question)
+        if log_question:
+            chat.append(self.p, "owner", question)
         conv = self._conv()
         stall = state.sync_from_jobs(self.p, self.db)   # статусы есть и у проектов, созданных не из брифа
         script = self.p.load_script()
@@ -125,7 +126,8 @@ class Bridge:
         text = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nЭто свободный вопрос: отвечай обычным текстом по-русски, НЕ JSON, "
                 f"коротко и по делу. Если данных не хватает — скажи, каких именно. Платные действия только предлагай, "
                 f"решает владелец.\n\nЭПИЗОД: {script.title}, CTA: {script.cta}\nСЦЕНЫ И СТАТУСЫ:\n```json\n"
-                f"{json.dumps(scenes, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{notes}")
+                f"{json.dumps(scenes, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{notes}\n\n"
+                f"ПОСЛЕДНИЕ СООБЩЕНИЯ ЧАТА (владелец, директор, Claude-продюсер):\n{chat.recent_text(self.p, 12)}")
         body = {"model": self.cfg["model"], "instructions": self.instructions(),
                 "input": [{"role": "user", "content": [{"type": "input_text", "text": text}]}],
                 "store": bool(self.cfg.get("store", True)), "max_output_tokens": int(self.cfg.get("max_output_tokens", 4000))}

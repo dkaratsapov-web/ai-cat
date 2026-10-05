@@ -46,6 +46,16 @@ def append(project: Project, role: str, text: str, **extra) -> None:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
 
+def recent_text(project: Project, n: int = 12) -> str:
+    """Последние свободные сообщения чата (для контекста директора и Claude)."""
+    log = chat_log(project)
+    if not log.exists():
+        return "(пока нет)"
+    lines = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines() if x.strip()][-n:]
+    names = {k: v[0] for k, v in ROLES.items()}
+    return "\n".join(f"[{names.get(m.get('role'), m.get('role'))}] {m.get('text', '')[:1500]}" for m in lines) or "(пока нет)"
+
+
 def _review_text(kind: str, scene: str, r: dict) -> str:
     out = []
     if kind == "script_review":

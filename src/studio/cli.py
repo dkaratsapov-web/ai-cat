@@ -694,6 +694,13 @@ def _director_ping(a, s):
     return 0 if (r.get("text") or "").strip() == "OPENAI_OK" else 1
 
 
+def cmd_chat(a, s):
+    from .director.server import ChatServer
+    proj = open_project(a.episode, s)
+    ChatServer(proj, _db(s), mode="mock" if a.mock else "openai").serve(port=a.port, open_browser=not a.no_open)
+    return 0
+
+
 def cmd_assets(a, s):
     from .director.assets import approved_assets, export_index, pending_character_refs
     if a.export:
@@ -916,6 +923,13 @@ def build_parser() -> argparse.ArgumentParser:
     dr.add_argument("--video", help="ролик для финального ревью (по умолчанию финальный)")
     dr.add_argument("--yes", action="store_true", help="подтвердить платный запрос к OpenAI без вопроса")
     dr.set_defaults(fn=cmd_director)
+
+    ch = sub.add_parser("chat", help="интерактивный чат эпизода: владелец, директор (GPT), Claude")
+    ch.add_argument("episode")
+    ch.add_argument("--port", type=int, default=8765)
+    ch.add_argument("--mock", action="store_true", help="директор-заглушка, без OpenAI")
+    ch.add_argument("--no-open", action="store_true", help="не открывать браузер")
+    ch.set_defaults(fn=cmd_chat)
 
     h = sub.add_parser("history", help="журнал действий")
     h.add_argument("episode", nargs="?")
