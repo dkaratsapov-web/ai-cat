@@ -408,12 +408,13 @@ scenes:
   type: talking
   duration: 5
   generator: kling
-  reference: fit_logo
+  reference: fit_present_side
   voiceover: Покупают вайб тренера, атмосферу, доверие и желание быть частью этого места.
-  visual: '[студия] Кот у логотипа говорит в камеру — кульминация'
+  visual: '[студия] Кот показывает лапой на зал и говорит в камеру — кульминация'
   prompts:
-    kling: The cat talks to the camera with warm conviction, slow nods, blinks naturally, small head turns, calm
-      breathing, whiskers twitch slightly, warm studio lights glow softly, ears stay folded, static camera
+    kling: The cat talks to the camera with warm conviction, its paw gently presents the studio space, slow nods,
+      blinks naturally, small head turns, calm breathing, whiskers twitch slightly, warm studio lights glow softly,
+      ears stay folded, static camera
   local:
     mode: pro
     ambient:
@@ -429,12 +430,12 @@ scenes:
   type: talking
   duration: 3.3
   generator: kling
-  reference: fit_phone_mat2
+  reference: fit_tablet_mat
   voiceover: Напишите «фитнес» — пришлю бесплатный чек-лист по запуску любой из перечисленных в ролике платформ и проконсультирую.
   subtitle: Напишите «ФИТНЕС» — пришлю бесплатный чек-лист по запуску любой из перечисленных в ролике платформ и проконсультирую.
-  visual: '[студия] Кот тянет лапу к зрителю + крупно «ФИТНЕС»'
+  visual: '[студия] Кот на коврике с планшетом (чек-лист) говорит в камеру + крупно «ФИТНЕС»'
   prompts:
-    kling: The cat holds the smartphone and talks to the camera with a friendly confident expression, short nod,
+    kling: The cat holds the tablet and talks to the camera with a friendly confident expression, short nod,
       blinks naturally, small head turns, calm breathing, whiskers twitch slightly, ears stay folded, static camera
   local:
     min_duration: 5.5

@@ -603,6 +603,107 @@ references:
   location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon,
     mirrors, aerial yoga hammocks, warm track lights'
   outfit: plain black hoodie
+- id: fit_walk_center
+  file: references/fit_walk_center.jpg
+  source_file: references/fit_walk_center.jpg
+  kind: reference
+  angle: walk_center
+  description: 'Студия: идёт к камере по центру зала, арки и подвесы'
+  status: pending
+  sha256: e8438a851400be14
+  added_at: '2026-10-06T01:30:00+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_20_20-6.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.42
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
+  outfit: black hoodie with a small white airplane logo on the chest
+- id: fit_tablet_mat
+  file: references/fit_tablet_mat.jpg
+  source_file: references/fit_tablet_mat.jpg
+  kind: reference
+  angle: tablet_mat
+  description: 'Студия: сидит на коврике с планшетом, смотрит в камеру'
+  status: pending
+  sha256: d034b7de3e06ef96
+  added_at: '2026-10-06T01:30:00+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_20_22-7.png
+  use: talking
+  focus:
+  - 0.5
+  - 0.35
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
+  outfit: black hoodie with a small white airplane logo on the chest
+- id: fit_present_side
+  file: references/fit_present_side.jpg
+  source_file: references/fit_present_side.jpg
+  kind: reference
+  angle: present_side
+  description: 'Студия: стоит, показывает лапой в сторону зала (презентует студию)'
+  status: pending
+  sha256: e6d540c410c46244
+  added_at: '2026-10-06T01:30:00+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_20_24-8.png
+  use: talking
+  focus:
+  - 0.42
+  - 0.35
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
+  outfit: black hoodie with a small white airplane logo on the chest
+- id: fit_present_mirror
+  file: references/fit_present_mirror.jpg
+  source_file: references/fit_present_mirror.jpg
+  kind: reference
+  angle: present_mirror
+  description: 'Студия: стоит у зеркала, жест лапой, отражение в зеркале'
+  status: pending
+  sha256: 80e7c056c88dada9
+  added_at: '2026-10-06T01:30:00+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_20_25-9.png
+  use: talking
+  focus:
+  - 0.4
+  - 0.38
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
+  outfit: black hoodie with a small white airplane logo on the chest
+- id: fit_paw_mat
+  file: references/fit_paw_mat.jpg
+  source_file: references/fit_paw_mat.jpg
+  kind: reference
+  angle: paw_mat
+  description: 'Студия: сидит на коврике, тянет лапу к зрителю'
+  status: pending
+  sha256: c6d3935cd1000c67
+  added_at: '2026-10-06T01:30:00+00:00'
+  generation:
+    prompt: кадры фитнес-студии от владельца (ChatGPT), 6 окт. 2026
+    model: ChatGPT (image)
+    params: {}
+    source_name: Изображение ChatGPT 6 окт. 2026 г., 01_20_26-10.png
+  use: motion
+  focus:
+  - 0.5
+  - 0.35
+  location: 'bright boutique fitness studio: warm wooden floor, beige yoga mats, illuminated arches with blue neon, mirrors, aerial yoga hammocks, warm track lights'
+  outfit: black hoodie with a small white airplane logo on the chest
+
 planned_angles:
 - angle: front_laptop
   description: Кот за ноутбуком, вид спереди
