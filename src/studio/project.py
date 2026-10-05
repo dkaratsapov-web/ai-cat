@@ -128,6 +128,11 @@ class Project:
     def approve_script(self) -> Script:
         script = self.load_script()
         script.validate(self.settings.get("video.min_duration", 20), self.settings.get("video.max_duration", 35))
+        from .director.brief import check_locks   # бриф директора: locked-поля менять нельзя
+        violations = check_locks(self, script)
+        if violations:
+            raise ProjectError("Изменены поля, закреплённые в брифе директора (locked):\n  - " + "\n  - ".join(violations)
+                               + "\nНужен новый утверждённый бриф (studio brief import) или откат правок.")
         self.set_status(
             "approved",
             approved_fingerprint=script.fingerprint(),

@@ -1,0 +1,98 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "scene_id": {
+   "type": "string"
+  },
+  "status": {
+   "type": "string",
+   "enum": [
+    "approved",
+    "revise"
+   ]
+  },
+  "identity": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "pass": {
+     "type": "boolean"
+    },
+    "confidence": {
+     "type": "string",
+     "enum": [
+      "high",
+      "medium",
+      "low"
+     ]
+    },
+    "notes": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "pass",
+    "confidence",
+    "notes"
+   ]
+  },
+  "motion": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "pass": {
+     "type": "boolean"
+    },
+    "notes": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "pass",
+    "notes"
+   ]
+  },
+  "composition": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "pass": {
+     "type": "boolean"
+    },
+    "notes": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "pass",
+    "notes"
+   ]
+  },
+  "issues": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "revision_prompt": {
+   "type": "string"
+  },
+  "requires_user_approval": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  }
+ },
+ "required": [
+  "scene_id",
+  "status",
+  "identity",
+  "motion",
+  "composition",
+  "issues",
+  "revision_prompt",
+  "requires_user_approval"
+ ]
+}

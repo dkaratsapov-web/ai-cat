@@ -1,0 +1,124 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "final_score": {
+   "type": "number"
+  },
+  "status": {
+   "type": "string",
+   "enum": [
+    "approved",
+    "revise"
+   ]
+  },
+  "required_changes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "timestamp": {
+      "type": "string"
+     },
+     "scene_id": {
+      "type": "string"
+     },
+     "change": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "timestamp",
+     "scene_id",
+     "change"
+    ]
+   }
+  },
+  "optional_improvements": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "timestamp": {
+      "type": "string"
+     },
+     "scene_id": {
+      "type": "string"
+     },
+     "change": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "timestamp",
+     "scene_id",
+     "change"
+    ]
+   }
+  },
+  "checks": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "hook_0_3s": {
+     "type": "string"
+    },
+    "pacing": {
+     "type": "string"
+    },
+    "scene_duration": {
+     "type": "string"
+    },
+    "repetition": {
+     "type": "string"
+    },
+    "character_consistency": {
+     "type": "string"
+    },
+    "text_readability": {
+     "type": "string"
+    },
+    "cta": {
+     "type": "string"
+    },
+    "soundtrack": {
+     "type": "string"
+    },
+    "transitions": {
+     "type": "string"
+    },
+    "retention_potential": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "hook_0_3s",
+    "pacing",
+    "scene_duration",
+    "repetition",
+    "character_consistency",
+    "text_readability",
+    "cta",
+    "soundtrack",
+    "transitions",
+    "retention_potential"
+   ]
+  },
+  "requires_user_approval": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  }
+ },
+ "required": [
+  "final_score",
+  "status",
+  "required_changes",
+  "optional_improvements",
+  "checks",
+  "requires_user_approval"
+ ]
+}

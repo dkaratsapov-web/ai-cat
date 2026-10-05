@@ -309,7 +309,33 @@ def cmd_voice_samples(a, s):
 def cmd_generate(a, s):
     from .generation.runner import Runner
     proj = open_project(a.episode, s)
-    Runner(proj, _db(s)).generate(_split(a.scenes), assume_yes=a.yes, regenerate=_split(a.regenerate), wait=not a.no_wait)
+    db = _db(s)
+    scenes = _split(a.scenes)
+    if a.review:   # режим директора: одна сцена → стоп → ревью
+        from .director import qc, state
+        state.sync_from_jobs(proj, db)
+        st = state.load(proj)
+        script = proj.load_script()
+        queue = [sc.id for sc in script.scenes if sc.generator != "local"
+                 and (st.get(sc.id) or {}).get("status", "approved") in ("approved", "revise")]
+        scenes = scenes[:1] if scenes else queue[:1]
+        if not scenes:
+            print("Нет сцен в статусе approved/revise — генерировать нечего.")
+            return 0
+        print(f"Режим ревью: генерирую только {scenes[0]}, затем стоп.")
+    Runner(proj, db).generate(scenes, assume_yes=a.yes, regenerate=_split(a.regenerate), wait=not a.no_wait)
+    from .director.review import write_cost_csv
+    write_cost_csv(db, s.root / "logs" / "costs.csv")   # общий журнал расходов (все эпизоды)
+    if a.review:
+        from .director import qc, state
+        state.sync_from_jobs(proj, db)
+        sid = scenes[0]
+        if (state.load(proj).get(sid) or {}).get("status") == "generated":
+            state.set_status(proj, sid, "review", "ждёт ревью директора")
+            info = qc.prepare_identity_qc(proj, sid)
+            print(f"\n{sid}: готово, статус review. СТОП.\n  Видео: scenes/{sid}.mp4 (версии: scenes/{sid}/)\n"
+                  f"  QC идентичности: {info['sheet']} (окрас: {info['similarity']} — {info['hint']})\n"
+                  f"  Ревью директора: studio director review-scene {proj.id} {sid}  (без OpenAI: --manual)")
     return 0
 
 
@@ -341,6 +367,12 @@ def cmd_jobs(a, s):
 def cmd_assemble(a, s):
     from .editing.assemble import assemble
     proj = open_project(a.episode, s)
+    if a.final:
+        from .director import state
+        state.sync_from_jobs(proj, _db(s))
+        blocking = state.all_final(proj)
+        if blocking:
+            raise ProjectError(f"Финальный монтаж невозможен: не в final — {', '.join(blocking)}")
     suffix = ("-nomusic" if a.no_music else "") + ("-nosubs" if a.no_subs else "")
     out = assemble(proj, music=Path(a.music) if a.music else None, burn_subtitles=not a.no_subs,
                    use_music=not a.no_music, suffix=suffix)
@@ -430,6 +462,11 @@ def cmd_web(a, s):
 
 def cmd_costs(a, s):
     db = _db(s)
+    if a.csv:
+        from .director.review import write_cost_csv
+        out = write_cost_csv(db, Path(a.csv), a.episode)
+        print(f"Журнал расходов: {out}")
+        return 0
     st = Budget(s, db).status(a.episode)
     for k, v in st.items():
         print(f"{k:<22} {v}")
@@ -437,6 +474,168 @@ def cmd_costs(a, s):
     for r in db.cost_rows(a.episode, limit=a.limit):
         print(f"  {r['ts']} {r['episode'] or '-':<40} {r['provider']:<11} {r['kind']:<9} ${r['amount_usd']:.3f} {r['note'] or ''}")
     print("\nОценочные суммы могут отличаться от фактического списания. Сверяйте с кабинетом провайдера.")
+    return 0
+
+
+def cmd_brief(a, s):
+    from .director import brief as br
+    if a.action == "check":
+        proj = open_project(a.target, s)
+        v = br.check_locks(proj)
+        print("Locked-поля в порядке." if not v else "Нарушения locked:\n  - " + "\n  - ".join(v))
+        return 0 if not v else 1
+    proj, script, errs = br.import_brief(Path(a.target), s, episode_id=a.id, dry_run=a.dry_run)
+    if errs:
+        print("Бриф НЕ принят:\n  - " + "\n  - ".join(errs))
+        return 1
+    if a.dry_run:
+        print(f"Бриф корректен (dry-run, ничего не создано): {len(script.scenes)} сцен, ~{script.planned_duration:.0f} с")
+        for sc in script.scenes:
+            print(f"  {sc.id}  {sc.type:<16} {sc.generator:<10} {sc.reference or '-':<18} {sc.subtitle_text[:60]}")
+        return 0
+    print(f"Создан проект {proj.id} из брифа. Статусы сцен: approved. Locked-поля зафиксированы.\n"
+          f"  Заметки директора: {proj.path / 'director' / 'director_notes.md'}\n  Дальше: studio script show {proj.id}")
+    return 0
+
+
+def cmd_scene_status(a, s):
+    from .director import state
+    proj = open_project(a.episode, s)
+    state.sync_from_jobs(proj, _db(s))
+    if a.scene and a.set:
+        state.set_status(proj, a.scene, a.set, a.note or "")
+    for sid, st in state.load(proj).items():
+        qc = (st.get("identity_qc") or {}).get("verdict", "—")
+        last = st["history"][-1]["at"][:16] if st.get("history") else ""
+        print(f"  {sid:<5} {st['status']:<10} v{st.get('versions', 0)}  QC кота: {qc:<5} {last}")
+    return 0
+
+
+def cmd_idqc(a, s):
+    from .director import qc
+    proj = open_project(a.episode, s)
+    if a.verdict:
+        r = qc.record_verdict(proj, a.scene, a.verdict, a.notes or "")
+        print(f"{a.scene}: QC идентичности = {r['verdict']} (версия v{r['version']})")
+        return 0
+    info = qc.prepare_identity_qc(proj, a.scene)
+    print(f"{a.scene}: контактный лист {info['sheet']}\n  окрас: сходство {info['similarity']} — {info['hint']} (подсказка, не вердикт)\n"
+          f"  Вердикт ставит человек: studio idqc {proj.id} {a.scene} --pass | --fail --notes \"...\"")
+    return 0
+
+
+def cmd_review(a, s):
+    from datetime import datetime
+    from .director import state
+    proj = open_project(a.episode, s)
+    if a.action == "import":   # ответ ChatGPT вручную (OpenAI недоступен)
+        from .director.bridge import import_review
+        if not a.file:
+            raise ProjectError("Нужен --file с ответом директора (JSON)")
+        data = import_review(proj, _db(s), a.scene, Path(a.file))
+        print(f"{a.scene}: ревью импортировано, статус директора: {data.get('status')}")
+        return 0
+    if a.action == "apply":    # применить последнее ревью директора по сцене
+        st = state.load(proj).get(a.scene) or {}
+        d = st.get("director")
+        if not d:
+            raise ProjectError(f"{a.scene}: нет ревью директора (studio director review-scene {proj.id} {a.scene})")
+        qc_v = (st.get("identity_qc") or {}).get("verdict")
+        if d["status"] == "approved" and a.approve:
+            state.set_status(proj, a.scene, "final", "директор approved + подтверждение пользователя", override=a.override)
+            print(f"{a.scene}: final.")
+        elif d["status"] == "approved":
+            print(f"{a.scene}: директор approved, QC кота: {qc_v}. В final — только с вашим подтверждением: "
+                  f"studio review apply {proj.id} {a.scene} --approve")
+        else:
+            state.set_status(proj, a.scene, "revise", "ревью директора: revise", force=True)
+            print(f"{a.scene}: revise. Предложение директора (НЕ применено, платно):\n  {d.get('revision_prompt')}\n"
+                  f"  Проблемы: {'; '.join(d.get('issues') or [])}\n"
+                  f"  Если согласны — я обновлю промпт, покажу смету, перегенерация только после вашего «да».")
+        return 0
+    text = Path(a.file).read_text(encoding="utf-8") if a.file else (a.text or "")
+    if not text.strip():
+        raise ProjectError("Пустое ревью: --text \"...\" или --file review.md")
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if a.scene == "all":
+        notes = proj.path / "director" / "director_notes.md"
+        old = notes.read_text(encoding="utf-8") if notes.exists() else "## Решения и правки\n"
+        mark = "## Решения и правки"
+        new = old.replace(mark, f"{mark}\n- {stamp}: {text.strip()}", 1) if mark in old else old + f"\n- {stamp}: {text.strip()}\n"
+        notes.parent.mkdir(parents=True, exist_ok=True)
+        notes.write_text(new, encoding="utf-8")
+        print(f"Общая правка записана в {notes}")
+        return 0
+    rdir = proj.dir("scenes") / a.scene
+    rdir.mkdir(parents=True, exist_ok=True)
+    with open(rdir / "review.md", "a", encoding="utf-8") as f:
+        f.write(f"\n## {stamp} — ревью директора\n{text.strip()}\n")
+    target = "final" if a.approve else "revise"
+    state.sync_from_jobs(proj, _db(s))
+    state.set_status(proj, a.scene, target, text.strip()[:200])
+    print(f"{a.scene}: ревью записано, статус {target}." + ("" if a.approve else
+          " Внесите правки (промпт/кадр — через утверждение) и: studio generate " + proj.id + f" --review --scenes {a.scene} --regenerate {a.scene}"))
+    return 0
+
+
+def cmd_review_pack(a, s):
+    from .director.review import build_review_pack
+    proj = open_project(a.episode, s)
+    z = build_review_pack(proj, _db(s), video=Path(a.video) if a.video else None)
+    print(f"Review-пакет: {z}\n  Внутри: review.md, preview.mp4, contact_sheet.jpg, frames/, costs.csv, director_notes.md")
+    return 0
+
+
+def cmd_director(a, s):
+    from .director import bridge as br
+    from .director import state
+    proj = open_project(a.episode, s)
+    db = _db(s)
+    mode = "mock" if a.mock else ("manual" if a.manual else "openai")
+    if a.action in ("sync", "status"):
+        st = state.sync_from_jobs(proj, db)
+        for sid, x in st.items():
+            d = (x.get("director") or {}).get("status", "—")
+            q = (x.get("identity_qc") or {}).get("verdict", "—")
+            sr = (x.get("script_review") or {}).get("status", "—")
+            print(f"  {sid:<5} {x['status']:<13} v{x.get('versions', 0)}  сценарий: {sr:<8} директор: {d:<8} QC кота: {q}")
+        return 0
+    if a.action == "export-review-package":
+        from datetime import datetime as _dt
+        pkg = s.root / "director_bridge" / "review_packages" / proj.id / (_dt.now().strftime("%Y%m%d-%H%M%S") + "_export")
+        br.export_final_package(proj, db, pkg, Path(a.video) if a.video else proj.final_video)
+        print(f"Review-пакет: {pkg}")
+        return 0
+    if mode == "openai" and not a.yes:
+        ok = input("Запрос к OpenAI платный (обычно центы; цена — в кабинете OpenAI). Отправить? [да/нет]: ")
+        if ok.strip().lower() not in ("да", "y", "yes", "д"):
+            print("Отменено.")
+            return 0
+    b = br.Bridge(proj, db, mode=mode)
+    if a.action == "review":
+        data = b.script_review()
+    elif a.action == "review-scene":
+        if not a.scene:
+            raise ProjectError("Укажите сцену: studio director review-scene <эпизод> sNN")
+        data = b.scene_review(a.scene)
+    else:
+        data = b.final_review(Path(a.video) if a.video else None)
+    if data:
+        print(f"Директор: {data.get('status')}" + (f", оценка {data['final_score']}" if "final_score" in data else ""))
+        print(f"  Ответ: {proj.path / 'director' / 'latest_review.md'}")
+    return 0
+
+
+def cmd_assets(a, s):
+    from .director.assets import approved_assets, export_index, pending_character_refs
+    if a.export:
+        print(f"Записано: {export_index(s)}")
+    items = approved_assets(s)
+    for k, v in sorted(items.items(), key=lambda kv: (kv[1]["kind"], kv[0])):
+        print(f"  {v['kind']:<10} {k:<24} {v.get('use', ''):<8} {v.get('location', ''):<15} {v.get('description', '')[:50]}")
+    pend = pending_character_refs(s)
+    if pend:
+        print(f"\nЕщё не утверждены (в бриф не попадут): {', '.join(pend)}")
     return 0
 
 
@@ -542,6 +741,7 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--regenerate", help="переделать сцены (новая платная попытка): s02")
     g.add_argument("--yes", action="store_true", help="подтвердить смету без вопроса")
     g.add_argument("--no-wait", action="store_true", help="не ждать завершения (потом: studio status --refresh)")
+    g.add_argument("--review", action="store_true", help="режим директора: одна сцена → стоп → ревью")
     g.set_defaults(fn=cmd_generate)
 
     st = sub.add_parser("status", help="статус задач и сцен")
@@ -561,6 +761,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--music")
     a.add_argument("--no-subs", action="store_true")
     a.add_argument("--no-music", action="store_true", help="версия без музыки (файл …-nomusic.mp4)")
+    a.add_argument("--final", action="store_true", help="только если все AI-сцены в статусе final (режим директора)")
     a.set_defaults(fn=cmd_assemble)
 
     q = sub.add_parser("qa", help="техническая проверка")
@@ -591,7 +792,60 @@ def build_parser() -> argparse.ArgumentParser:
     co = sub.add_parser("costs", help="расходы и бюджет")
     co.add_argument("episode", nargs="?")
     co.add_argument("--limit", type=int, default=30)
+    co.add_argument("--csv", help="выгрузить журнал расходов в CSV: date,project,scene,provider,model,duration,cost,status")
     co.set_defaults(fn=cmd_costs)
+
+    # --- режим контент-директора (ChatGPT утверждает, Claude исполняет)
+    b = sub.add_parser("brief", help="Director Brief: import <file.yaml> [--dry-run] | check <эпизод>")
+    b.add_argument("action", choices=["import", "check"])
+    b.add_argument("target", help="файл брифа (import) или id эпизода (check)")
+    b.add_argument("--id", help="id проекта (по умолчанию episode-<project>)")
+    b.add_argument("--dry-run", action="store_true", help="только проверить и показать, ничего не создавать")
+    b.set_defaults(fn=cmd_brief)
+
+    ss = sub.add_parser("scene-status", help="статусы сцен draft→approved→generating→generated→review→revise→final")
+    ss.add_argument("episode")
+    ss.add_argument("scene", nargs="?")
+    ss.add_argument("--set", help="новый статус сцены")
+    ss.add_argument("--note")
+    ss.set_defaults(fn=cmd_scene_status)
+
+    iq = sub.add_parser("idqc", help="QC идентичности кота: материалы или вердикт --pass/--fail")
+    iq.add_argument("episode")
+    iq.add_argument("scene")
+    iq.add_argument("--pass", dest="verdict", action="store_const", const="pass")
+    iq.add_argument("--fail", dest="verdict", action="store_const", const="fail")
+    iq.add_argument("--notes")
+    iq.set_defaults(fn=cmd_idqc)
+
+    rv = sub.add_parser("review", help="ревью: add (своё/директора текстом) | apply (ответ директора) | import (ответ ChatGPT вручную)")
+    rv.add_argument("action", choices=["add", "apply", "import"])
+    rv.add_argument("episode")
+    rv.add_argument("scene", help="sNN | all (add: в director_notes) | script | final (import)")
+    rv.add_argument("--override", action="store_true", help="ручное решение пользователя: final вопреки вердикту")
+    rv.add_argument("--text")
+    rv.add_argument("--file")
+    rv.add_argument("--approve", action="store_true", help="сцена утверждена директором → final (нужен QC кота pass)")
+    rv.set_defaults(fn=cmd_review)
+
+    rp = sub.add_parser("review-pack", help="пакет для ревью директора (zip)")
+    rp.add_argument("episode")
+    rp.add_argument("--video", help="какой ролик (по умолчанию финальный)")
+    rp.set_defaults(fn=cmd_review_pack)
+
+    asp = sub.add_parser("assets", help="библиотека approved_assets")
+    asp.add_argument("--export", action="store_true", help="записать assets/approved/index.yaml")
+    asp.set_defaults(fn=cmd_assets)
+
+    dr = sub.add_parser("director", help="Director Bridge (OpenAI): review | review-scene | review-final | sync | status | export-review-package")
+    dr.add_argument("action", choices=["review", "review-scene", "review-final", "sync", "status", "export-review-package"])
+    dr.add_argument("episode")
+    dr.add_argument("scene", nargs="?")
+    dr.add_argument("--mock", action="store_true", help="dry-run: ответ-заглушка, без OpenAI и без денег")
+    dr.add_argument("--manual", action="store_true", help="только пакет для ручного ревью в ChatGPT")
+    dr.add_argument("--video", help="ролик для финального ревью (по умолчанию финальный)")
+    dr.add_argument("--yes", action="store_true", help="подтвердить платный запрос к OpenAI без вопроса")
+    dr.set_defaults(fn=cmd_director)
 
     h = sub.add_parser("history", help="журнал действий")
     h.add_argument("episode", nargs="?")

@@ -1,0 +1,55 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "status": {
+   "type": "string",
+   "enum": [
+    "approved",
+    "revise"
+   ]
+  },
+  "overall_notes": {
+   "type": "string"
+  },
+  "scene_notes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "scene_id": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "approved",
+       "revise"
+      ]
+     },
+     "notes": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "scene_id",
+     "status",
+     "notes"
+    ]
+   }
+  },
+  "requires_user_approval": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  }
+ },
+ "required": [
+  "status",
+  "overall_notes",
+  "scene_notes",
+  "requires_user_approval"
+ ]
+}

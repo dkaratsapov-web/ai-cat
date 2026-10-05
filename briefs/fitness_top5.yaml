@@ -1,0 +1,297 @@
+project: fitness_top5
+status: approved
+version: 2
+title: ТОП-5 инструментов для продвижения фитнес-студии
+goal:
+  audience: владельцы фитнес-студий, управляющие, тренеры
+  objective: lead_generation
+  cta: Напиши ФИТНЕС
+character:
+  reference: assets/character/references/closeup_front.jpg
+  locked_character: true
+  locked_outfit: true
+style:
+  tone: expert_ironic
+  office_and_field_mix: true
+  pacing: dynamic
+  locked_style: true
+voice:
+  preset: default
+target_duration: 50
+scenes:
+- id: s01
+  location: office
+  asset: closeup_front
+  type: talking
+  generator: kling
+  duration: 4.2
+  voiceover: Топ-пять инструментов для фитнес-студии. И первое место вас удивит.
+  subtitle: Топ-5 инструментов для фитнес-студии. И первое место вас удивит.
+  motion: The cat talks to the camera with a confident, slightly ironic look, small head tilt, blinks naturally,
+    small head turns, calm breathing, whiskers twitch slightly, subtle breathing
+  mode: pro
+  overlays:
+  - style: hero
+    text: ТОП-5
+    accent: топ-5
+    at: 0.1
+    size: 150
+    y: 960
+  - style: hero
+    text: ПРОДВИЖЕНИЯ ФИТНЕС-СТУДИИ
+    at: 0.35
+    size: 54
+    y: 1140
+  ambient:
+    zoom: 0.09
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s02
+  location: office
+  asset: typing_evening
+  type: motion
+  generator: kling
+  duration: 2
+  voiceover: Пятое — Яндекс Директ.
+  motion: The cat types quickly on the laptop keyboard, the screen flickers softly, steam rises from the coffee,
+    slight head movement
+  overlays:
+  - style: rank
+    rank: 5
+    text: Яндекс Директ
+    at: директ
+    y: 1070
+    image: yandex_direct
+  transition: zoomin
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s03
+  location: fitness_studio
+  asset: fit_walk_arches
+  type: motion
+  generator: higgsfield
+  duration: 3
+  voiceover: Где-то заходит отлично, а где-то выжигает спрос.
+  motion: The cat walks calmly toward the camera, tail moves naturally, reflections on the floor and neon arches
+    stay stable
+  model: bytedance/seedance-2.0/image-to-video
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s04
+  location: office
+  asset: phone_call
+  type: motion
+  generator: kling
+  duration: 2
+  voiceover: Четвёртое — Телеграм Эдс.
+  subtitle: Четвёртое — Telegram Ads.
+  motion: The cat holds the phone, nods, rolls its eyes playfully, gestures with the other paw
+  overlays:
+  - style: rank
+    rank: 4
+    text: Telegram Ads
+    at: телеграм
+    y: 1070
+    image: telegram
+  transition: zoomin
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s05
+  location: fitness_studio
+  asset: fit_phone_mat
+  type: motion
+  generator: kling
+  duration: 5.0
+  voiceover: В городах на двести–пятьсот тысяч работает, если есть районные сообщества.
+  subtitle: В городах на 200–500 тысяч работает, если есть районные сообщества.
+  motion: The cat lies on the yoga mat and scrolls the smartphone with its paw, looks at the screen, blinks, soft
+    warm lights
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s06
+  location: office
+  asset: pointing_chart
+  type: motion
+  generator: kling
+  duration: 4.2
+  voiceover: 'Третье — ВэКа Эдс: точная география по городам и районам.'
+  subtitle: 'Третье — VK Ads: точная география по городам и районам.'
+  motion: The cat points at the chart on the board with its paw, then turns its head to the camera, small gesture
+    with the other paw
+  overlays:
+  - style: rank
+    rank: 3
+    text: VK Ads
+    at: вэка
+    y: 1070
+    image: vk_ads
+  transition: zoomin
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s07
+  location: fitness_studio
+  asset: fit_walk_neon
+  type: motion
+  generator: higgsfield
+  duration: 4
+  voiceover: И ВэКа часто остаётся доступным, когда проблемы со связью.
+  subtitle: И VK часто остаётся доступным, когда проблемы со связью.
+  motion: The cat walks toward the camera between glowing blue arches, tail sways, mirror reflections stay stable
+  model: bytedance/seedance-2.0/image-to-video
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s08
+  location: office
+  asset: detective_magnifier
+  type: motion
+  generator: kling
+  duration: 4.6
+  voiceover: Второе — Яндекс Карты и геосервисы. Для локальной студии это маст-хэв.
+  motion: The cat slowly moves the magnifying glass across the laptop screen, its magnified eye moves behind the
+    lens, then it looks at the camera
+  overlays:
+  - style: rank
+    rank: 2
+    text: Карты и геосервисы
+    at: карты
+    y: 1070
+    image: yandex_maps
+  transition: zoomin
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s09
+  location: fitness_studio
+  asset: fit_logo_mat
+  type: talking
+  generator: kling
+  duration: 5.8
+  voiceover: Карточка, отзывы, фото и акции могут привести первых клиентов уже в первый месяц.
+  motion: The cat talks to the camera calmly and confidently, small nods, blinks naturally, small head turns, calm
+    breathing, whiskers twitch slightly, warm studio lights glow softly
+  mode: pro
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s10
+  location: office
+  asset: coffee_guru
+  type: motion
+  generator: kling
+  duration: 3.3
+  voiceover: А первое место… Все ждут секретный инструмент.
+  motion: The cat calmly holds the coffee cup, steam rises, it blinks slowly and gives a knowing look to the camera
+  transition: zoomin
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s10b
+  location: fitness_studio
+  asset: fit_point_arches
+  type: motion
+  generator: kling
+  duration: 2.1
+  voiceover: Но нет — это эс-эм-эм.
+  subtitle: Но нет — это SMM.
+  motion: The cat thrusts its paw toward the camera with a confident, slightly smug look, blinks naturally, small
+    head turns, calm breathing, whiskers twitch slightly, neon arches glow steadily
+  overlays:
+  - style: rank
+    rank: 1
+    text: SMM + соцсети
+    at: эсэмэм
+    y: 1070
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s11
+  location: fitness_studio
+  asset: fit_walk_hammocks
+  type: motion
+  generator: higgsfield
+  duration: 3
+  voiceover: Запретграмм, ВэКа, Телеграм-канал и Макс.
+  subtitle: Запретграмм, VK, Telegram-канал и MAX.
+  motion: The cat walks toward the camera under the aerial yoga hammocks, the hammocks sway slightly, tail moves
+    naturally
+  model: bytedance/seedance-2.0/image-to-video
+  overlays:
+  - style: icons
+    y: 1020
+    items:
+    - image: instagram
+      label: Запретграмм
+      at: запретграмм
+    - image: vk
+      label: VK
+      at: вэка
+    - image: telegram
+      label: Telegram
+      at: телеграм
+    - image: max
+      label: MAX
+      at: макс
+    gap: 40
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s13
+  location: fitness_studio
+  asset: fit_walk_low
+  type: motion
+  generator: higgsfield
+  duration: 5.0
+  voiceover: В фитнесе покупают тренера, атмосферу и желание быть частью этого места.
+  motion: The cat steps forward toward the camera with confident slow steps, tail moves, arch lights glow steadily
+  model: bytedance/seedance-2.0/image-to-video
+  transition: smoothleft
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+- id: s14
+  location: fitness_studio
+  asset: fit_phone_mat2
+  type: talking
+  generator: kling
+  duration: 3.3
+  voiceover: Напишите «фитнес» — пришлю бесплатный чек-лист и проконсультирую.
+  subtitle: Напишите «ФИТНЕС» — пришлю бесплатный чек-лист и проконсультирую.
+  motion: The cat holds the smartphone and talks to the camera with a friendly confident expression, short nod,
+    blinks naturally, small head turns, calm breathing, whiskers twitch slightly
+  mode: pro
+  overlays:
+  - style: hero
+    text: Напишите
+    at: напишите
+    size: 60
+    y: 870
+  - style: hero
+    text: ФИТНЕС
+    accent: фитнес
+    at: фитнес
+    size: 150
+    y: 960
+  transition: zoomin
+  min_duration: 5.5
+  locked_location: true
+  locked_text: true
+  locked_composition: true
+review_rules:
+  preserve_identity: true
+  no_extra_limbs: true
+  no_cartoon_style: true
+  preserve_folded_ears: true
+  preserve_tabby_pattern: true

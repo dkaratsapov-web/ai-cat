@@ -1,4 +1,4 @@
-# AI Content Director Orchestrator — архитектура (на ревью, не реализовано)
+# AI Content Director Orchestrator + Director Bridge (реализовано, dry-run)
 
 Роли: **ChatGPT — контент-директор** (концепция, бриф, ревью). **Claude Code — технический продюсер**
 (API, генерация, версии, деньги, монтаж, хранение). **Владелец** — передаёт брифы и ревью, утверждает платное.
@@ -20,22 +20,28 @@ Kling и Higgsfield — только генераторы. Claude не меня�
 | Предпросмотр без денег (настоящие кадры, тестовый голос) | `studio pipeline <ep> --mock` |
 | 20 правил качества | `CLAUDE.md` |
 
-## Что добавить (план)
-1. **Director Brief → сценарий.** `briefs/<project>.yaml` в формате директора (project, status: approved, goal, character,
-   scenes[id, location, asset, duration, generator, motion], review_rules). Команда `studio brief import <file>`:
-   проверяет `status: approved`, сопоставляет `asset` с библиотекой кадров, переводит `motion` в промпт без творческих
-   добавок (только обязательные «ears stay folded, static camera»), создаёт проект. Неоднозначность → вопрос, не догадка.
-2. **Статусы сцены:** `draft → approved → generating → generated → review → revise → final`
-   (`studio scene status <ep>`; монтаж финала — только из сцен `final`).
-3. **Стоп после каждой генерации** (режим `--review`): сгенерировать → сохранить `scenes/sNN/generation_vN.mp4` →
-   превью (контактный лист кадров + mp4 540p) → статус `review` → остановиться.
-4. **Ревью директора:** `studio review <ep> s04 --file review.md` (или текст). Сохраняется в `scenes/s04/review.md`;
-   статус `revise` (+ правки промпта/кадра на утверждение) или `final`. Переделывается только указанная сцена.
-5. **Версии:** `scenes/sNN/` — `source.png`, `prompt.txt`, `generation_v1.mp4`, `generation_v2.mp4`, `review.md`, `final.mp4`;
-   старые версии не удаляются.
-6. **Журнал расходов CSV:** `studio costs --csv` → `date,project,scene,provider,model,duration,cost,status`;
-   перед каждой генерацией: сцена, провайдер, оценка, потрачено за месяц, «продолжить?».
-7. **Финальный QC через директора:** `studio package` собирает файл + превью + список сцен с таймкодами для ревью.
+## Реализовано (модуль `studio.director`, папка `director_bridge/`)
+Цель — убрать ручное копирование между контент-директором и Claude. Деньги и финальные творческие решения — за владельцем.
+
+| Шаг | Команда | Что происходит |
+|---|---|---|
+| Бриф | `studio brief import briefs/<p>.yaml [--dry-run]` | только `status: approved`; asset → approved_assets; locked-поля → `director/lock.json`; `director/director_notes.md` |
+| Ревью сценария | `studio director review <ep> [--mock\|--manual]` | раскадровка (кадры сцен) + тексты → JSON `script_review` |
+| Генерация 1 сцены | `studio generate <ep> --scenes s04 --review` | `scenes/s04/generation_vN.mp4`, стоп, `qc/identity_sheet.jpg` |
+| QC кота | `studio idqc <ep> s04 --pass\|--fail --notes ...` | вердикт ставит человек; директор даёт pass только при high confidence |
+| Ревью сцены | `studio director review-scene <ep> s04` | кадры клипа + референс → `scenes/s04/review.md`, статус review/revise |
+| Применить | `studio review apply <ep> s04 [--approve] [--override]` | показывает правку промпта; платная перегенерация — только отдельной командой со сметой |
+| Финал | `studio director review-final <ep>` | пакет: preview.mp4, contact_sheet.jpg, scene_map.json, subtitles.srt, script.txt, director_brief.yaml, costs.csv |
+| Без OpenAI | `--manual` / нет ключа | `MANUAL.md` + пакет для ручной вставки в ChatGPT; ответ — `studio review import <ep> <target> --file answer.json` |
+| Прочее | `studio director status\|sync\|export-review-package`, `studio scene-status`, `studio assets --export`, `studio costs --csv` | |
+
+Статусы: `draft → approved → generating → generated → review → (revise | manual_review) → final`.
+`final` запрещён, если директор вернул revise на текущую версию или QC кота текущей версии не `pass`
+(владелец может снять запрет `--override`). `assemble --final` — только когда все сцены `final`.
+
+OpenAI Responses API (`POST /v1/responses`, Bearer, `json_schema` strict, `previous_response_id` — отдельная
+переписка на эпизод в `director_bridge/conversations/`). Видео API не принимает — шлём кадры. Ключ `OPENAI_API_KEY`
+только в `.env`, в логи не пишется; ключи Kling/Higgsfield в OpenAI не уходят. Каждый вызов OpenAI — после «да».
 
 ## Higgsfield MCP
 Официальный MCP подходит как ручной инструмент поверх. Для конвейера оставляем API: контроль денег, версий,

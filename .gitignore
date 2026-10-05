@@ -33,3 +33,11 @@ config/studio.local.yaml
 
 .DS_Store
 Thumbs.db
+
+# Director Bridge: локальные данные (история диалогов, ответы, пакеты, журналы)
+director_bridge/conversations/*
+director_bridge/responses/*
+director_bridge/review_packages/*
+director_bridge/logs/*
+!director_bridge/**/.gitkeep
+logs/

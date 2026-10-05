@@ -243,6 +243,9 @@ class Runner:
             prov_paid = any(video_provider(j.provider, self.s).paid for j in to_submit)
             if prov_paid:
                 budget = Budget(self.s, self.db)
+                bst = budget.status(self.p.id)
+                print(f"Потрачено: за месяц ${bst['spent_month_usd']:.2f} из ${bst['monthly_budget_usd']:.0f}, "
+                      f"по ролику ${bst['spent_episode_usd']:.2f} из ${bst['per_video_limit_usd']:.0f}")
                 for w in budget.check(self.p.id, est.total):
                     print(w)
                 for j in to_submit:
@@ -450,6 +453,7 @@ class Runner:
             src = self.s.projects_dir / job["episode"] / job["result_path"]
             if src.exists():
                 dest.write_bytes(src.read_bytes())
+                self._keep_version({**job, "scene_id": scene_id}, dest)
                 print(f"  {scene_id}: использован готовый результат задачи {job['id'][:8]} (без оплаты)")
                 return
         if job.get("result_url"):
@@ -476,9 +480,21 @@ class Runner:
         if dest.exists():
             dest.rename(dest.with_name(f"{dest.stem}.prev-{int(time.time())}.mp4"))
         prov.download(job["result_url"], dest)
+        self._keep_version(job, dest)
         self.db.update_job(job["id"], result_path=str(dest.relative_to(self.p.path)))
         self.db.log("download", {"scene": job["scene_id"], "file": dest.name}, episode=self.p.id)
         return dest
+
+    def _keep_version(self, job: dict, dest: Path) -> None:
+        """Версии сцены: scenes/sNN/generation_vN.mp4 + prompt.txt — старые не удаляются (для ревью директора)."""
+        vdir = self.p.dir("scenes") / job["scene_id"]
+        vdir.mkdir(parents=True, exist_ok=True)
+        n = len(list(vdir.glob("generation_v*.mp4"))) + 1
+        (vdir / f"generation_v{n}.mp4").write_bytes(dest.read_bytes())
+        params = json.loads(job.get("params_json") or "{}")
+        (vdir / f"prompt_v{n}.txt").write_text(
+            f"provider: {job['provider']}\nmodel: {job.get('model')}\njob: {job['id']}\n\n{params.get('prompt', '')}\n",
+            encoding="utf-8")
 
     def _update_project_status(self, script: Script) -> None:
         missing = [sc.id for sc in script.scenes if sc.generator not in ("local",) and not self.p.scene_source(sc.id)]

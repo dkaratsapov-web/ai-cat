@@ -1,0 +1,10 @@
+# Director Bridge: OpenAI Responses API как контент-директор.
+# Ключ — только в .env: OPENAI_API_KEY. Kling/Higgsfield-ключи в OpenAI не передаются.
+provider: openai
+endpoint: https://api.openai.com/v1/responses     # сверено по официальному SDK openai 3.24.0
+model: gpt-5.5          # модель с пониманием изображений; сверьте доступность и цену в кабинете OpenAI
+image_detail: auto      # low | high | auto | original
+max_images: 12          # кадров на запрос (видео API не принимает — отправляем кадры и контактные листы)
+store: true             # нужно для previous_response_id (история ревью эпизода хранится на стороне OpenAI)
+timeout_sec: 120
+max_output_tokens: 4000

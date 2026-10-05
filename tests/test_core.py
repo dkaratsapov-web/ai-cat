@@ -544,3 +544,40 @@ def test_limit_errors_do_not_block_retry():
     assert is_limit_error("отложено (лимит задач): HTTP 429")
     assert not is_limit_error("HTTP 400: {'code': 1201, 'message': 'The model did not detect a human'}")
     assert not is_limit_error(None)
+
+
+def test_director_brief_locks_and_final_gate(settings, tmp_path):
+    """Бриф директора: только approved; locked-текст нельзя менять; final нельзя без QC кота и при revise директора."""
+    import json as _json
+    import yaml as _yaml
+    from studio.director import brief as br, state
+    from studio.director.openai_client import MockDirector, build_request, output_text
+    from studio.character.library import CharacterLibrary
+    s = settings
+    lib = CharacterLibrary(s)
+    ref = lib.references()[0]["id"]
+    lib.set_status(ref, "approved")
+    b = {"project": "t1", "status": "draft", "scenes": []}
+    assert any("approved" in e for e in br.validate_brief(b, s))
+    bf = tmp_path / "b.yaml"
+    bf.write_text(_yaml.safe_dump({"project": "t1", "status": "approved", "goal": {"cta": "Напиши ФИТНЕС"}, "scenes": [
+        {"id": "s01", "location": "office", "asset": ref, "type": "talking", "generator": "kling", "duration": 4,
+         "voiceover": "Привет, это тест для проверки.", "motion": "talks to camera", "locked_text": True}]},
+        allow_unicode=True), encoding="utf-8")
+    proj, script, errs = br.import_brief(bf, s, episode_id="t1-ep")
+    assert not errs and "ears stay folded, static camera" in script.scenes[0].prompts["kling"]
+    sc = proj.load_script()
+    sc.scenes[0].voiceover = "Другой текст"
+    proj.save_script(sc)
+    assert br.check_locks(proj)
+    st = state.load(proj)
+    st["s01"].update(status="review", versions=1, director={"status": "revise", "version": 1})
+    state.save(proj, st)
+    import pytest
+    with pytest.raises(state.StateError):
+        state.set_status(proj, "s01", "final")
+    body = build_request({"model": "m"}, instructions="i", text="```json\n{\"scene_id\": \"s01\"}\n```", images=[],
+                         schema_name="scene_review", schema={}, previous_response_id=None)
+    assert body["text"]["format"]["type"] == "json_schema" and body["input"][0]["content"][0]["type"] == "input_text"
+    data = _json.loads(output_text(MockDirector({}).send(body)))
+    assert data["scene_id"] == "s01" and data["status"] in ("approved", "revise")
