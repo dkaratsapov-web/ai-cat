@@ -330,7 +330,9 @@ class BotApp(Host):
 
     # ------------------------------------------------------------ туннель
     def start_tunnel(self) -> None:
-        exe = shutil.which("cloudflared")
+        exe = shutil.which("cloudflared") or next(   # после winget PATH обновится только в новом окне
+            (str(c) for c in (Path(r"C:\Program Files (x86)\cloudflared\cloudflared.exe"),
+                              Path(r"C:\Program Files\cloudflared\cloudflared.exe")) if c.exists()), None)
         if self.url or not self.use_tunnel or not exe:
             if not self.url:
                 print("Туннеля нет: мини-приложение откроется только после установки cloudflared (docs/BOT.md). "
