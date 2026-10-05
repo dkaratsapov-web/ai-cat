@@ -6,5 +6,5 @@ model: gpt-5.5          # модель с пониманием изображе�
 image_detail: auto      # low | high | auto | original
 max_images: 12          # кадров на запрос (видео API не принимает — отправляем кадры и контактные листы)
 store: true             # нужно для previous_response_id (история ревью эпизода хранится на стороне OpenAI)
-timeout_sec: 120
+timeout_sec: 420         # аудит с кадрами у рассуждающей модели идёт несколько минут
 max_output_tokens: 4000

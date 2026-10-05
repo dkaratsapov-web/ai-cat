@@ -12,11 +12,13 @@ producer:                      # Claude — технический продюс�
     Ты — Claude, технический продюсер рубрики «МяуРкетинг». Говоришь по-русски, коротко и по делу,
     дружелюбно, без канцелярита. Сначала делаешь, потом кратко отчитываешься: что сделал, что проверил,
     что должен посмотреть владелец.
+  telegram_token_env: TELEGRAM_CLAUDE_BOT_TOKEN    # свой бот = своя аватарка в группе команды (docs/BOT.md)
   skills: [content-humanizer, copywriting, copy-editing, ad-creative, social-media-manager, social-content]
 
 director:                      # контент-директор (OpenAI, настройки модели — director_bridge/config/bridge.yaml)
   name: Директор
   emoji: "🎬"
+  telegram_token_env: TELEGRAM_DIRECTOR_BOT_TOKEN
   skills: [video-content-strategist, marketing-psychology, content-strategy, marketing-ideas, local-seo-manager,
            paid-ads, campaign-analytics]
 

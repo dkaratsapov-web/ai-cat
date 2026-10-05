@@ -87,6 +87,13 @@ class BotApp(Host):
         self.jobs: "queue.Queue[tuple]" = queue.Queue()
         self.lock = threading.Lock()
         self.url = secret("MINIAPP_URL") or ""
+        # свой бот (своя аватарка и имя) у каждого агента — если задан токен в .env; иначе пишет основной бот
+        self.voices: dict[str, Telegram] = {}
+        for role, key in (("claude", "producer"), ("director", "director")):
+            env = (self.cfg.get(key) or {}).get("telegram_token_env")
+            tok = secret(env) if env else None
+            if tok:
+                self.voices[role] = Telegram(tok)
         self.producer: Producer | None = None
         self.adviser: Producer | None = None
         if secret("ANTHROPIC_API_KEY"):
@@ -122,15 +129,32 @@ class BotApp(Host):
         a = self.cfg.get("producer" if key == "claude" else key, {})
         return f"{a.get('emoji', '')} {a.get('name', key)}".strip()
 
+    @property
+    def chat_id(self) -> int:
+        """Куда пишут агенты: группа команды (если привязана командой /bind) или личка с владельцем."""
+        return int(self.state.get("group") or self.owner)
+
     def tell(self, role: str, text: str, buttons=None) -> None:
-        """В ленту мини-приложения + сообщением в Telegram."""
+        """В ленту мини-приложения + сообщением в Telegram. У агента со своим ботом — от его имени и с его аватаркой
+        (только в группе: в личку с владельцем другой бот писать не может). Кнопки — всегда от основного бота:
+        нажатия приходят тому боту, который отправил сообщение."""
         self.post(role, text)
-        if self.tg:
-            label = ROLE_NAMES.get(role) or self.agent_label(role)
-            try:
-                self.tg.send(self.owner, f"{label}:\n{text}", buttons)
-            except TelegramError as e:
-                print(f"Telegram: {e}")
+        if not self.tg:
+            return
+        voice = self.voices.get(role) if self.state.get("group") and not buttons else None
+        label = ROLE_NAMES.get(role) or self.agent_label(role)
+        try:
+            if voice:
+                voice.send(self.chat_id, text)
+            else:
+                self.tg.send(self.chat_id, f"{label}:\n{text}", buttons)
+        except TelegramError as e:
+            print(f"Telegram: {e}")
+            if voice:   # бот агента не в группе — дублируем от основного
+                try:
+                    self.tg.send(self.chat_id, f"{label}:\n{text}", buttons)
+                except TelegramError:
+                    pass
 
     # ------------------------------------------------------------ Host для Claude
     def notify(self, text: str) -> None:
@@ -138,7 +162,7 @@ class BotApp(Host):
         self.post("system", text)
         if self.tg:
             try:
-                self.tg.send(self.owner, text)
+                self.tg.send(self.chat_id, text)
             except TelegramError:
                 pass
 
@@ -201,7 +225,7 @@ class BotApp(Host):
         self.post("claude", caption or path.name, file=rel)
         if self.tg:
             try:
-                self.tg.send_file(self.owner, path, caption)
+                ((self.state.get('group') and self.voices.get('claude')) or self.tg).send_file(self.chat_id, path, caption)
             except TelegramError as e:
                 return f"в мини-приложении показал, в Telegram не отправилось: {e}"
         return "отправлено владельцу"
@@ -253,7 +277,7 @@ class BotApp(Host):
         self.busy["claude"] = True
         try:
             if self.tg:
-                self.tg.typing(self.owner)
+                self.tg.typing(self.chat_id)
             ans = self.producer.chat(f"[текущий эпизод: {self.episode or 'не выбран'}]\n{text}")
             self.tell("claude", ans)
         except Exception as e:   # noqa: BLE001
@@ -331,7 +355,7 @@ class BotApp(Host):
                     self.tell("system", "Claude не подключён: нет ANTHROPIC_API_KEY в .env")
                     continue
                 if self.tg:
-                    self.tg.typing(self.owner)
+                    self.tg.typing(self.chat_id)
                 ans = self.adviser.chat(f"[текущий эпизод: {self.episode or 'не выбран'}; {self._now_line()}]\n{text}")
                 self.tell("claude", ans)
             except Exception as e:   # noqa: BLE001
@@ -430,7 +454,27 @@ class BotApp(Host):
                         self.tg.drop_buttons(msg["chat"]["id"], msg["message_id"])
                     continue
                 msg = u.get("message") or {}
+                chat = msg.get("chat", {})
+                if msg.get("from", {}).get("id") == self.owner and (msg.get("text") or "").startswith("/bind"):
+                    if chat.get("type") in ("group", "supergroup"):
+                        self.state["group"] = chat["id"]
+                        self.save_state()
+                        self.tell("system", "✅ Группа команды привязана: агенты пишут сюда, каждый от своего бота.")
+                    else:
+                        self.tg.send(chat["id"], "Команду /bind отправьте в группе, куда добавлены боты агентов.")
+                    continue
+                if (msg.get("text") or "").startswith("/unbind") and msg.get("from", {}).get("id") == self.owner:
+                    self.state.pop("group", None)
+                    self.save_state()
+                    self.tg.send(self.owner, "Группа отвязана — пишу в личные сообщения.")
+                    continue
+                if chat.get("id") not in (self.owner, self.state.get("group")):
+                    continue      # чужие группы игнорируем
                 if msg.get("from", {}).get("id") != self.owner:
+                    if msg.get("from", {}).get("is_bot"):
+                        continue  # сообщения ботов-агентов в группе
+                    if chat.get("type") in ("group", "supergroup"):
+                        continue
                     if msg.get("chat", {}).get("id"):
                         try:
                             self.tg.send(msg["chat"]["id"], "Это личный бот студии.")

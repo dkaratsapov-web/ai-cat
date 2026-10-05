@@ -73,6 +73,9 @@ class OpenAIDirector:
             r = requests.post(self.cfg.get("endpoint", "https://api.openai.com/v1/responses"), json=body,
                               headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                               timeout=int(self.cfg.get("timeout_sec", 120)), allow_redirects=False)
+        except requests.Timeout as e:
+            raise DirectorUnavailable(f"OpenAI не ответил за {self.cfg.get('timeout_sec', 120)} с "
+                                      "(увеличьте timeout_sec в director_bridge/config/bridge.yaml)") from e
         except requests.RequestException as e:
             raise DirectorUnavailable(f"OpenAI недоступен: {redact(str(e))}") from e
         if r.status_code >= 400:

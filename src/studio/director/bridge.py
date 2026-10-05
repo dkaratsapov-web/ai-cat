@@ -125,7 +125,7 @@ class Bridge:
         if video.exists():
             pkg = self._pkg("audit")
             export_final_package(self.p, self.db, pkg, video)
-            imgs = [pkg / "contact_sheet.jpg"] + sorted((pkg / "keyframes").glob("*.jpg"))[:8]
+            imgs = [pkg / "contact_sheet.jpg"] + sorted((pkg / "keyframes").glob("*.jpg"))[::3][:5]   # лист + 5 кадров: быстрее и дешевле
             srt = (pkg / "subtitles.srt").read_text(encoding="utf-8") if (pkg / "subtitles.srt").exists() else ""
             sm = (pkg / "scene_map.json").read_text(encoding="utf-8") if (pkg / "scene_map.json").exists() else ""
             return [i for i in imgs if i.exists()], (f"ВИЗУАЛ: собранный ролик — контактный лист (кадр каждые 2.5 с с "
