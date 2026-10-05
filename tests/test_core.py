@@ -496,3 +496,42 @@ def test_stale_job_does_not_overwrite_newer_scene(settings, tmp_path):
                   params={}, idempotency_key="b", est_cost_usd=0, status="succeeded")
     db.update_job(old, status="succeeded", result_url="file:///nonexistent.mp4")
     assert Runner(proj, db)._download(db.get_job(old)) is None
+
+
+def test_higgsfield_adapter_protocol(tmp_path, monkeypatch):
+    """Адаптер Higgsfield: авторизация Key id:secret, загрузка файла, тело Seedance без звука, разбор статусов."""
+    from studio.integrations import higgsfield as hf
+    from studio.integrations.base import VideoRequest
+
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "kid")
+    monkeypatch.setenv("HIGGSFIELD_API_SECRET", "ksec")
+    calls = []
+
+    def fake_http(method, url, *, headers, json_body=None, **kw):
+        calls.append((method, url, headers.get("Authorization"), json_body, kw.get("safe_to_retry", True)))
+        if url.endswith("/files/generate-upload-url"):
+            return {"public_url": "https://cdn/x.png", "upload_url": "https://up/x"}
+        if url.endswith("/status"):
+            return {"status": "completed", "video": {"url": "https://cdn/v.mp4"}}
+        return {"request_id": "r1", "status_url": "s", "cancel_url": "c"}
+
+    class Resp:
+        status_code = 200
+        text = ""
+
+    monkeypatch.setattr(hf, "http_json", fake_http)
+    monkeypatch.setattr(hf.requests, "put", lambda *a, **k: Resp())
+    img = tmp_path / "cat.png"
+    img.write_bytes(b"png")
+    p = hf.HiggsfieldProvider()
+    req = VideoRequest(kind="image2video", model="bytedance/seedance-2.5/image-to-video", prompt="cat", image=img,
+                       duration=4.6, resolution="720p")
+    assert p.billed_duration(req) == 5
+    assert p.estimate_usd(req, {"higgsfield": {"models": {req.model: {"usd_per_second": {"720p": 0.2}}}}}) == 1.0
+    assert p.submit(req) == "r1"
+    method, url, auth, body, safe = calls[-1]
+    assert url == "https://api.higgsfield.ai/bytedance/seedance-2.5/image-to-video" and auth == "Key kid:ksec"
+    assert body["image_url"] == "https://cdn/x.png" and body["generate_audio"] is False and body["duration"] == 5
+    assert safe is False   # платный запрос не повторяется вслепую
+    st = p.poll("r1", "image2video")
+    assert st.status == "succeeded" and st.video_url == "https://cdn/v.mp4"

@@ -85,7 +85,7 @@ def run_doctor(settings: Settings, check_api: bool = False) -> bool:
             src += f"  (начало: {val[:len(pre) + 4]}…, сверьте с кабинетом)" if val.startswith(pre) else ""
         print(f"       {name:<22} {key_shape(os.environ.get(name))}{src}")
 
-    for name in ("kling", "hedra", "runway"):
+    for name in ("kling", "higgsfield", "hedra", "runway"):
         prov = video_provider(name, settings)
         c, why = prov.configured()
         line("OK" if c else "WARN", f"Видео: {name}", why)

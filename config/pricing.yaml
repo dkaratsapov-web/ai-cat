@@ -22,6 +22,19 @@ kling:
     lip-sync:         {per_5_seconds: 0.5}
     face-recognition: {per_call: 0.05}
 
+higgsfield:
+  # Цены по обзорам (mindstudio.ai, chaseai.io, сентябрь–октябрь 2026), НЕ из официального прайса:
+  # перед первой генерацией сверьте в кабинете (Billing / страница модели) и поправьте.
+  # Разбивка по разрешениям неизвестна — для 480p/720p стоит одна (верхняя) ставка; 1080p не задан намеренно:
+  # без тарифа смета невозможна, и платный запуск не начнётся.
+  source: https://www.mindstudio.ai/blog/higgsfield-api-pricing-pay-per-use
+  checked: 2026-10-05
+  verified: false
+  models:
+    bytedance/seedance-2.5/image-to-video: {usd_per_second: {480p: 0.2057, 720p: 0.2057}}
+    bytedance/seedance-2.0/image-to-video: {usd_per_second: {480p: 0.1407, 720p: 0.1407}}
+    # v1/speak/higgsfield — цена неизвестна: внесите из кабинета перед тестом
+
 hedra:
   source: https://www.hedra.com/models/video/hedra/character-3
   checked: 2026-10-02

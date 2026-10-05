@@ -100,6 +100,12 @@ kling:
   #   motion_lipsync — живая анимация + Lip Sync, НО Lip Sync Kling распознаёт только людей (проверено 2026-10-04:
   #   «The model did not detect a human») — для кота даёт анимацию без движения губ. Можно задать в сцене: local.talking_mode
   talking_mode: avatar
+# Higgsfield (агрегатор): Seedance для «вау»-сцен. В сцене: generator: higgsfield (+ local.model при желании)
+higgsfield:
+  i2v_model: bytedance/seedance-2.5/image-to-video   # id сверить в кабинете; 2.0 — bytedance/seedance-2.0/image-to-video (не проверен)
+  resolution: 720p
+  speak_model: v1/speak/higgsfield                    # говорящее видео; на коте не проверено
+  speak_quality: mid
 hedra:
   model: hedra-character-3
   resolution: 720p

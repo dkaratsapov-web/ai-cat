@@ -11,6 +11,9 @@ def video_provider(name: str, settings) -> VideoProvider:
     if name == "hedra":
         from .hedra import HedraProvider
         return HedraProvider(settings)
+    if name == "higgsfield":
+        from .higgsfield import HiggsfieldProvider
+        return HiggsfieldProvider(settings)
     if name == "runway":
         from .runway import RunwayProvider
         return RunwayProvider(settings)
@@ -33,5 +36,5 @@ def tts_provider(name: str, settings) -> TTSProvider:
     raise ValueError(f"Неизвестный TTS-провайдер: {name}")
 
 
-VIDEO_PROVIDERS = ("kling", "hedra", "runway", "mock")
+VIDEO_PROVIDERS = ("kling", "higgsfield", "hedra", "runway", "mock")
 TTS_PROVIDERS = ("yandex", "elevenlabs", "manual", "mock")

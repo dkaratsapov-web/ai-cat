@@ -90,7 +90,7 @@ def plan_scene(project: Project, scene: Scene, lib: CharacterLibrary, *, need_au
         duration = scene.clip_duration or min(scene.duration, 5)
 
     # Тестовый режим: все платные генераторы подменяются бесплатной заглушкой
-    if s.get("override_generator") and gen in ("kling", "hedra", "runway"):
+    if s.get("override_generator") and gen in ("kling", "higgsfield", "hedra", "runway"):
         gen = s.get("override_generator")
     provider = gen
     if talking:
@@ -106,6 +106,12 @@ def plan_scene(project: Project, scene: Scene, lib: CharacterLibrary, *, need_au
         elif gen in ("kling", "mock"):
             req = VideoRequest(kind="avatar", model="avatar", prompt=prompt, image=image, audio=audio,
                                duration=round(duration, 2), mode=scene.local.get("mode") or s.get("kling.avatar_mode", "std"))
+        elif gen == "higgsfield":
+            # Экспериментально: говорящее видео Higgsfield Speak (фото + WAV). На коте не проверено
+            req = VideoRequest(kind="avatar", model=s.get("higgsfield.speak_model", "v1/speak/higgsfield"),
+                               prompt=prompt, image=image, audio=audio, duration=round(duration, 2),
+                               mode=scene.local.get("quality") or s.get("higgsfield.speak_quality", "mid"),
+                               resolution="default")
         elif gen == "hedra":
             req = VideoRequest(kind="avatar", model=s.get("hedra.model", "hedra-character-3"), prompt=prompt,
                                image=image, audio=audio, duration=round(duration, 2),
@@ -117,6 +123,12 @@ def plan_scene(project: Project, scene: Scene, lib: CharacterLibrary, *, need_au
             req = VideoRequest(kind="image2video", model=scene.local.get("model") or s.get("kling.i2v_model", "kling-2.6"),
                                prompt=prompt, negative_prompt=negative, image=image, duration=duration,
                                resolution=scene.local.get("resolution") or s.get("kling.resolution", "720p"))
+        elif gen == "higgsfield":
+            req = VideoRequest(kind="image2video",
+                               model=scene.local.get("model") or s.get("higgsfield.i2v_model",
+                                                                       "bytedance/seedance-2.5/image-to-video"),
+                               prompt=prompt, negative_prompt=negative, image=image, duration=duration,
+                               resolution=scene.local.get("resolution") or s.get("higgsfield.resolution", "720p"))
         elif gen == "runway":
             req = VideoRequest(kind="image2video", model=s.get("runway.model", "gen4_turbo"), prompt=prompt, image=image,
                                duration=duration, extra={"ratio": s.get("runway.ratio", "720:1280")})

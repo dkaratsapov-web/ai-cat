@@ -29,8 +29,8 @@ SCENE_TYPES = {
 
 SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
-GENERATORS = ("kling", "hedra", "runway", "local", "manual", "mock")
-PAID_GENERATORS = ("kling", "hedra", "runway")
+GENERATORS = ("kling", "higgsfield", "hedra", "runway", "local", "manual", "mock")
+PAID_GENERATORS = ("kling", "higgsfield", "hedra", "runway")
 
 
 class ScriptError(ValueError):
