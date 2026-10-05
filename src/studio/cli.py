@@ -392,9 +392,15 @@ def cmd_qa(a, s):
     if rep.passed:
         print(f"\nПосмотрите ролик и утвердите: studio approve {proj.id}  (или исправьте сцену и пересоберите)")
     else:
+        stale = any(c.name == "Актуальность сборки" and c.status == "fail" for c in rep.checks)
         bad = sorted({c.scene for c in rep.checks if c.status == "fail" and c.scene})
-        if bad:
-            print(f"\nПроблемные сцены: {', '.join(bad)}. Переделать: studio generate {proj.id} --regenerate {','.join(bad)}")
+        if stale:
+            # ролик собран из старого сценария — расхождения из-за этого, а не из-за сцен; перегенерация не нужна
+            print(f"\nРолик собран из прежней версии сценария — проверка сравнивает не то. Ничего не перегенерируйте: "
+                  f"сначала пересоберите (studio assemble {proj.id}) и запустите qa снова.")
+        elif bad:
+            print(f"\nПроблемные сцены: {', '.join(bad)}. Переделать (ПЛАТНО, сначала посмотрите ролик): "
+                  f"studio generate {proj.id} --regenerate {','.join(bad)}")
     return 0 if rep.passed else 2
 
 
