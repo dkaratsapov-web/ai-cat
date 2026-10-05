@@ -26,6 +26,7 @@ scenes:
     kling: The cat talks to the camera with a confident, slightly ironic look, small head tilt, blinks naturally,
       small head turns, calm breathing, whiskers twitch slightly, subtle breathing, ears stay folded, static camera
   local:
+    subtitles_from: досмотрите   # первая фраза уже на экране заголовком — без дубля субтитрами
     ambient:
       zoom: 0.09
     overlays:   # v3 (директор): ТОП-5 меньше и ниже — морда свободна; по одной плашке за раз
@@ -33,13 +34,13 @@ scenes:
       text: ТОП-5
       accent: топ-5
       at: 0.1
-      until: первое
+      until: досмотрите
       size: 110
       y: 1050
     - style: hero
       text: "ИНСТРУМЕНТОВ ДЛЯ ПРИВЛЕЧЕНИЯ\nКЛИЕНТОВ В ФИТНЕС-СТУДИЮ"
       at: 0.35
-      until: первое
+      until: досмотрите
       size: 42
       y: 1175
     - style: note
@@ -98,8 +99,8 @@ scenes:
   duration: 5
   generator: kling
   reference: shock_monitor
-  voiceover: а где-то просто выжигает спрос. Ситуативно!
-  visual: '[офис] Кот в шоке от падающего графика — «выжигает спрос»'
+  voiceover: а где-то просто выжигает бюджет. Ситуативно!
+  visual: '[офис] Кот в шоке от падающего графика — «выжигает бюджет»'
   prompts:
     kling: The cat reacts in shock to the falling chart on the monitor, paws near its face, eyes widen, then it
       slowly shakes its head, the monitor graph flickers, ears stay folded, static camera

@@ -383,8 +383,13 @@ def assemble(project: Project, *, music: Path | None = None, burn_subtitles: boo
     for it in items:
         text = it.scene.subtitle_text
         if text:
-            cues += scene_cues(it.scene.id, text, it.start, it.meta, it.duration,
-                               int(st["max_words_per_line"]), int(st["max_chars_per_line"]))
+            sc_cues = scene_cues(it.scene.id, text, it.start, it.meta, it.duration,
+                                 int(st["max_words_per_line"]), int(st["max_chars_per_line"]))
+            frm = it.scene.local.get("subtitles_from")
+            if frm is not None:   # пока на экране заголовок с тем же текстом — субтитры не дублируют его
+                t0 = it.start + anchor_time(frm, (it.meta or {}).get("words") or [], 0.0) - 0.01
+                sc_cues = [c for c in sc_cues if c.start >= t0]
+            cues += sc_cues
     subs_dir = project.dir("subtitles")
     srt = write_srt(cues, subs_dir / f"{project.id}.srt")
     font_name = ass_font_name(settings.fonts_dir, st["font_name"], st["fallback_font_name"])
