@@ -306,6 +306,9 @@ class BotApp(Host):
                 continue
             for u in ups:
                 offset = u["update_id"] + 1
+                frm = (u.get("message") or u.get("callback_query") or {}).get("from", {})
+                print(f"Telegram: сообщение от id {frm.get('id')}" + ("" if frm.get("id") == self.owner else
+                      f" — НЕ владелец (в .env TELEGRAM_OWNER_ID={self.owner})"), flush=True)
                 cb = u.get("callback_query")
                 if cb:
                     if cb.get("from", {}).get("id") != self.owner:
@@ -472,12 +475,14 @@ class BotApp(Host):
               f"Директор: {'да' if secret('OPENAI_API_KEY') else 'нет ключа'} · локально: http://127.0.0.1:{self.port}/"
               + (" (dev, без проверки Telegram)" if self.dev else ""))
         if self.tg:
+            print("Подключаюсь к Telegram…", flush=True)
             try:
-                me = self.tg.call("getMe")
+                me = self.tg.call("getMe", timeout=25)
                 print(f"Telegram: @{me.get('username')}. Напишите боту /start. Остановить: Ctrl+C")
                 self.send_app_button()
             except TelegramError as e:
-                raise SystemExit(f"Telegram не принял токен: {e}") from None
+                raise SystemExit(f"Нет связи с Telegram API или неверный токен: {e}\n"
+                                 "Если это таймаут/ConnectionError — api.telegram.org недоступен из вашей сети.") from None
             self.poll()
         else:
             while True:
