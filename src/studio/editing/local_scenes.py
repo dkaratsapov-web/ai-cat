@@ -297,7 +297,7 @@ def _draw_styled(layer: Image.Image, settings: Settings, ov: dict, t: float) -> 
         size = int(ov.get("size", 110))
         f = fonts.font(settings.fonts_dir, size)
         hl = str(ov.get("accent", "")).lower().split()
-        lines = wrap(d, ov["text"], f, w - 2 * sa["left"])
+        lines = [ln for part in str(ov["text"]).split("\n") for ln in wrap(d, part.strip(), f, w - 2 * sa["left"])]
         y = float(ov.get("y", 1000)) + (1 - p) * 24
         for line in lines:
             xx = (w - d.textlength(line, font=f)) / 2
