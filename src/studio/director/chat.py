@@ -48,10 +48,11 @@ def append(project: Project, role: str, text: str, **extra) -> None:
 
 def recent_text(project: Project, n: int = 12) -> str:
     """Последние свободные сообщения чата (для контекста директора и Claude)."""
-    log = chat_log(project)
-    if not log.exists():
-        return "(пока нет)"
-    lines = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines() if x.strip()][-n:]
+    lines = []
+    for log in (chat_log(project), project.path / "director" / "claude_replies.jsonl"):
+        if log.exists():
+            lines += [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines() if x.strip()]
+    lines = sorted(lines, key=lambda m: _ts(m.get("at")))[-n:]
     names = {k: v[0] for k, v in ROLES.items()}
     return "\n".join(f"[{names.get(m.get('role'), m.get('role'))}] {m.get('text', '')[:1500]}" for m in lines) or "(пока нет)"
 
@@ -134,11 +135,11 @@ def collect(project: Project, db: DB | None = None) -> list[dict]:
                 text += f"\nИтого: ${total:.2f}"
             msgs.append({"role": "claude", "at": jobs[-1].get("updated_at"),
                          "scene": jobs[0]["scene_id"] if len(jobs) == 1 else "", "text": text})
-    log = chat_log(project)
-    if log.exists():
-        for line in log.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                msgs.append(json.loads(line))
+    for log in (chat_log(project), project.path / "director" / "claude_replies.jsonl"):
+        if log.exists():
+            for line in log.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    msgs.append(json.loads(line))
     msgs.sort(key=lambda m: _ts(m.get("at")))
     return msgs
 

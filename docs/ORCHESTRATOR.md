@@ -35,6 +35,7 @@ Kling и Higgsfield — только генераторы. Claude не меня�
 | Без OpenAI | `--manual` / нет ключа | `MANUAL.md` + пакет для ручной вставки в ChatGPT; ответ — `studio review import <ep> <target> --file answer.json` |
 | Чат | `studio director chat <ep> --open` · `studio director ask <ep> "вопрос"` | лента Владелец / Директор / Claude в `director/chat.html`; ask — платный запрос после «да» |
 | Живой чат | `studio chat <ep>` | http://127.0.0.1:8765: пишете Директору / Claude / Обоим; Claude — локальный Claude Code (`claude -p`), платные команды ему запрещены |
+| Claude без установки | кнопки «Отправить Claude» / «Получить ответы Claude» или `studio chat <ep> --share` / `--pull` | переписка ходит через репозиторий; ответы Claude — `projects/<ep>/director/claude_replies.jsonl` |
 | Связь | `studio director ping` | бесплатно: ключ и модель; после «да» — один крошечный запрос |
 | Прочее | `studio director status\|sync\|export-review-package`, `studio scene-status`, `studio assets --export`, `studio costs --csv` | |
 

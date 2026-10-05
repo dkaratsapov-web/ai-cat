@@ -21,6 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from ..db import DB
 from ..project import Project
 from . import chat
+from . import share as share_mod
 
 CLAUDE_ALLOWED = ["Read", "Glob", "Grep", "Edit", "Write",
                   "Bash(studio script show:*)", "Bash(studio director status:*)",
@@ -51,6 +52,7 @@ class ChatServer:
         self.busy: dict[str, bool] = {"director": False, "claude": False}
         self.lock = threading.Lock()
         self.claude_bin = shutil.which("claude")
+        self.last_share = ""
 
     # ------------------------------------------------------------ участники
     def _director(self, text: str) -> str | None:
@@ -65,9 +67,15 @@ class ChatServer:
             self.busy["director"] = False
 
     def _claude(self, text: str) -> None:
-        if not self.claude_bin:
-            chat.append(self.p, "claude", "Claude Code на этом компьютере не найден (команда `claude`). Установите его — "
-                                          "тогда я смогу отвечать и работать прямо в этом чате. Пока пишите мне в приложении Claude.")
+        if not self.claude_bin:   # без Claude Code: переписка уходит Claude через репозиторий
+            self.busy["claude"] = True
+            try:
+                ok, msg = share_mod.share(self.p)
+                self.last_share = msg
+                chat.append(self.p, "claude", ("✓ " if ok else "✗ ") + msg + ("" if ok else
+                            "\nМожно повторить кнопкой «Отправить Claude» или прислать текст в приложение."), system=True)
+            finally:
+                self.busy["claude"] = False
             return
         self.busy["claude"] = True
         try:
@@ -132,8 +140,17 @@ class ChatServer:
 
             def do_POST(self):
                 # свой заголовок: чужая страница в браузере не сможет отправить сообщение от вашего имени
-                if self.path != "/api/send" or self.headers.get("X-Studio") != "1":
+                if self.headers.get("X-Studio") != "1":
                     return self._send(403, b"forbidden", "text/plain")
+                if self.path in ("/api/share", "/api/pull"):
+                    fn = share_mod.share if self.path == "/api/share" else share_mod.pull
+                    ok, msg = fn(srv.p)
+                    if self.path == "/api/pull" and ok:
+                        msg = "Ответы Claude получены" if "Already up to date" not in msg and "Уже актуально" not in msg \
+                            else "Новых ответов пока нет"
+                    return self._send(200 if ok else 500, msg.encode(), "text/plain; charset=utf-8")
+                if self.path != "/api/send":
+                    return self._send(404, b"not found", "text/plain")
                 n = int(self.headers.get("Content-Length") or 0)
                 data = json.loads(self.rfile.read(n) or b"{}")
                 text, to = str(data.get("text", "")).strip(), data.get("to", "director")
@@ -165,6 +182,7 @@ textarea{flex:1 1 300px;min-height:44px;max-height:180px;padding:9px 10px;border
 background:var(--bg);color:var(--fg);font:inherit;resize:vertical}
 .to{font-size:13px}.to label{font-size:13px;margin-right:10px;cursor:pointer;white-space:nowrap}.to input{width:auto;margin:0 4px 0 0;padding:0;vertical-align:middle}button{padding:10px 16px;border:0;border-radius:10px;
 background:#2563eb;color:#fff;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:default}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line);padding:7px 12px;font-size:13px}
 #st{font-size:12px;color:var(--muted);max-width:820px;margin:4px auto 0}
 </style></head><body>
 <header><h1>__EP__</h1><div class="legend"><span><i style="background:var(--owner)"></i>Владелец</span>
@@ -176,23 +194,28 @@ background:#2563eb;color:#fff;font:inherit;cursor:pointer}button:disabled{opacit
 <label><input type="radio" name="to" value="claude"> Claude</label>
 <label><input type="radio" name="to" value="both"> Обоим</label></div></div>
 <div class="row"><textarea id="t" placeholder="Сообщение… (Ctrl+Enter — отправить)"></textarea><button id="b">Отправить</button></div>
+<div class="row" style="margin-top:6px"><button class="sec" id="sh">Отправить Claude</button><button class="sec" id="pl">Получить ответы Claude</button></div>
 <div id="st"></div></footer>
 <script>
 const feed=document.getElementById('feed'),t=document.getElementById('t'),b=document.getElementById('b'),st=document.getElementById('st'),f=document.getElementById('f');
-const NAMES={owner:'Владелец',director:'Директор · GPT',claude:'Claude · продюсер'};let last='';
+let noteAt=0;const NAMES={owner:'Владелец',director:'Директор · GPT',claude:'Claude · продюсер'};let last='';
 function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 async function load(){try{const r=await fetch('/api/feed');const d=await r.json();
  const key=JSON.stringify(d.messages.length)+JSON.stringify(d.busy)+f.value;
  const busy=d.busy.director||d.busy.claude;b.disabled=busy;
- st.textContent=(d.busy.director?'Директор думает… ':'')+(d.busy.claude?'Claude работает… ':'')+
-  (busy?'':'Директор: '+(d.mode==='mock'?'заглушка':'OpenAI, каждое сообщение — запрос на центы')+' · Claude: '+(d.claude?'подключён':'не установлен на компьютере'));
+ if(Date.now()-noteAt>10000)st.textContent=(d.busy.director?'Директор думает… ':'')+(d.busy.claude?'Claude работает… ':'')+
+  (busy?'':'Директор: '+(d.mode==='mock'?'заглушка':'OpenAI, каждое сообщение — запрос на центы')+' · Claude: '+(d.claude?'подключён':'через репозиторий — ответы кнопкой «Получить ответы Claude»'));
  if(key===last)return;last=key;const atBottom=feed.scrollHeight-feed.scrollTop-feed.clientHeight<80;
  feed.innerHTML=d.messages.filter(m=>!f.value.trim()||m.scene===f.value.trim()).map(m=>{const dt=m.at?new Date(m.at.length===15?m.at.replace(/(\\d{4})(\\d{2})(\\d{2})-(\\d{2})(\\d{2})(\\d{2})/,'$1-$2-$3T$4:$5:$6Z'):m.at):null;
   return `<div class="msg ${m.role in NAMES?m.role:'claude'}"><div class="meta">${NAMES[m.role]||m.role}${dt&&!isNaN(dt)?' · '+dt.toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</div>${esc(m.text||'')}</div>`}).join('')||'<p class="tools">Пока пусто.</p>';
  if(atBottom||!feed.dataset.init){feed.scrollTop=feed.scrollHeight;feed.dataset.init=1}}catch(e){st.textContent='Нет связи с сервером чата (окно PowerShell закрыто?)'}}
 async function send(){const text=t.value.trim();if(!text)return;const to=document.querySelector('input[name=to]:checked').value;
  b.disabled=true;const r=await fetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json','X-Studio':'1'},body:JSON.stringify({to,text})});
- if(r.ok){t.value=''}else{st.textContent=await r.text()}load()}
+ if(r.ok){t.value=''}else{st.textContent=await r.text();noteAt=Date.now()}load()}
+async function git(path,label){st.textContent=label+'…';const r=await fetch(path,{method:'POST',headers:{'X-Studio':'1'}});
+ st.textContent=await r.text();noteAt=Date.now();last='';load()}
+document.getElementById('sh').onclick=()=>git('/api/share','Отправляю Claude');
+document.getElementById('pl').onclick=()=>git('/api/pull','Получаю ответы');
 b.onclick=send;t.onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))send()};f.oninput=()=>{last='';load()};
 load();setInterval(load,2500);
 </script></body></html>"""

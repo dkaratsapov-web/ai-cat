@@ -697,6 +697,11 @@ def _director_ping(a, s):
 def cmd_chat(a, s):
     from .director.server import ChatServer
     proj = open_project(a.episode, s)
+    if a.share or a.pull:
+        from .director import share
+        ok, msg = (share.share if a.share else share.pull)(proj)
+        print(("✓ " if ok else "✗ ") + msg)
+        return 0 if ok else 1
     ChatServer(proj, _db(s), mode="mock" if a.mock else "openai").serve(port=a.port, open_browser=not a.no_open)
     return 0
 
@@ -929,6 +934,8 @@ def build_parser() -> argparse.ArgumentParser:
     ch.add_argument("--port", type=int, default=8765)
     ch.add_argument("--mock", action="store_true", help="директор-заглушка, без OpenAI")
     ch.add_argument("--no-open", action="store_true", help="не открывать браузер")
+    ch.add_argument("--share", action="store_true", help="отправить переписку Claude через репозиторий (без запуска чата)")
+    ch.add_argument("--pull", action="store_true", help="получить ответы Claude из репозитория")
     ch.set_defaults(fn=cmd_chat)
 
     h = sub.add_parser("history", help="журнал действий")
