@@ -122,7 +122,13 @@ class BotApp(Host):
 
     # ------------------------------------------------------------ Host для Claude
     def notify(self, text: str) -> None:
+        """Ход работы агента: в ленту и коротко в Telegram — чтобы было видно, что задача идёт."""
         self.post("system", text)
+        if self.tg:
+            try:
+                self.tg.send(self.owner, text)
+            except TelegramError:
+                pass
 
     def _director_budget(self) -> str | None:
         day = datetime.now().strftime("%Y-%m-%d")
@@ -139,7 +145,7 @@ class BotApp(Host):
         from ..director.bridge import Bridge
         return Bridge(open_project(episode, self.s), self.db, mode="openai")
 
-    def ask_director(self, episode: str, question: str, from_claude: bool = True) -> str:
+    def ask_director(self, episode: str, question: str, from_claude: bool = True, audit: bool = False) -> str:
         why = self._director_budget()
         if why:
             return f"ОТКАЗ: {why}"
@@ -147,7 +153,7 @@ class BotApp(Host):
         try:
             if from_claude:
                 self.post("claude", f"→ {self.agent_label('director')}: {question}")
-            ans = self._bridge(episode).ask(question, log_question=False)
+            ans = self._bridge(episode).ask(question, log_question=False, audit=audit)
             if not ans:
                 return "директор недоступен (проверьте OPENAI_API_KEY)"
             self.tell("director", ans)
@@ -260,7 +266,17 @@ class BotApp(Host):
             return self.tell("system", "Эпизоды:\n" + "\n".join(ids[-15:]) + "\nВыбор: /ep <id>")
         if text.startswith(("/d ", "/director ")):
             to, text = "director", text.split(" ", 1)[1]
+        elif text.startswith(("/c ", "/claude ")):
+            to, text = "claude", text.split(" ", 1)[1]
+        elif via == "tg" and not text.startswith("/"):
+            to = "team"           # по умолчанию: директор смотрит первым → аудит → Claude
         self.post("owner", text, to=to)
+        ack = {"team": f"{self.agent_label('director')} взял задачу: смотрю работу и готовлю аудит для Claude…",
+               "director": f"{self.agent_label('director')}: смотрю…",
+               "claude": f"{self.agent_label('claude')}: взял в работу…",
+               "both": f"{self.agent_label('director')} и {self.agent_label('claude')}: взяли в работу…"}.get(to)
+        if ack:
+            self.notify(ack + (f" (в очереди: {self.jobs.qsize()})" if self.jobs.qsize() else ""))
         self.jobs.put((to, text))
 
     def worker(self) -> None:
@@ -269,6 +285,20 @@ class BotApp(Host):
             try:
                 if kind == "paid":
                     self._run_paid(payload)
+                elif kind == "team":
+                    if not self.episode:
+                        self.tell("system", "Сначала выберите эпизод: /ep")
+                        continue
+                    audit = self.ask_director(self.episode, payload, from_claude=False, audit=True)
+                    if audit.startswith(("ОТКАЗ", "ОШИБКА", "директор недоступен")):
+                        self.notify(f"Директор не смог: {audit[:200]}. Передаю задачу Claude без аудита.")
+                        audit = "(аудита нет)"
+                    else:
+                        self.notify(f"{self.agent_label('claude')}: получил аудит директора, составляю план…")
+                    self._claude_turn(f"Задача владельца: {payload}\n\nАудит директора (он уже посмотрел кадры):\n{audit}\n\n"
+                                      "Сверь аудит с проектом. Если владелец не сказал явно «делай» — пришли пул правок "
+                                      "по пунктам (что, где, бесплатно или платно, сколько стоит) и спроси утверждение; "
+                                      "файлы до этого не меняй и платное не запрашивай.")
                 elif kind in ("director", "both"):
                     if not self.episode:
                         self.tell("system", "Сначала выберите эпизод: /ep")
@@ -451,7 +481,7 @@ class BotApp(Host):
                     return self._json({"error": "bad json"}, 400)
                 if u.path == "/api/send":
                     text, to = str(data.get("text", "")).strip(), data.get("to", "claude")
-                    if not text or to not in ("claude", "director", "both"):
+                    if not text or to not in ("team", "claude", "director", "both"):
                         return self._json({"error": "пустое сообщение"}, 400)
                     app.handle_text(text, to=to, via="app")
                     return self._json({"ok": True})

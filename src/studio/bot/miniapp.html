@@ -57,7 +57,7 @@ h3{margin:14px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;
 <section id="chat" class="tab on">
   <div id="feed"><div class="empty">Загрузка…</div></div>
   <footer>
-    <div class="chips"><button class="chip on" data-to="claude">🐱 Claude</button><button class="chip" data-to="director">🎬 Директор</button><button class="chip" data-to="both">Обоим</button></div>
+    <div class="chips"><button class="chip on" data-to="team">Команда</button><button class="chip" data-to="claude">🐱 Claude</button><button class="chip" data-to="director">🎬 Директор</button></div>
     <div class="send"><textarea id="t" rows="1" placeholder="Задача или вопрос…"></textarea><button class="btn" id="b">➤</button></div>
     <div id="status"></div>
   </footer>
@@ -82,7 +82,7 @@ h3{margin:14px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;
 <script>
 const tg=window.Telegram&&Telegram.WebApp;if(tg&&tg.initData){tg.ready();tg.expand();document.documentElement.dataset.tg=1}
 const INIT=tg?tg.initData:'';const H={'Content-Type':'application/json','X-Init-Data':INIT};
-const $=s=>document.querySelector(s);let to='claude',last='',snap=null,noteAt=0;
+const $=s=>document.querySelector(s);let to='team',last='',snap=null,noteAt=0;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const furl=p=>'/api/file?path='+encodeURIComponent(p)+'&auth='+encodeURIComponent(INIT);
 function note(t){$('#status').textContent=t;noteAt=Date.now()}
@@ -100,7 +100,7 @@ function render(){
     <div class="row"><button class="btn" onclick="pay('${p.id}',1)">✅ Утверждаю</button><button class="btn ghost" onclick="pay('${p.id}',0)">Отмена</button></div></div>`).join('');
   const msgs=snap.feed.map(m=>{let media='';if(m.file){media=/\.(mp4|mov)$/i.test(m.file)?`<video src="${furl(m.file)}" controls playsinline></video>`:
       /\.(jpe?g|png|webp)$/i.test(m.file)?`<img src="${furl(m.file)}">`:`<div class="tag">${esc(m.file)}</div>`}
-    const who=names(m.role);return `<div class="msg ${esc(m.role)}">${who?`<div class="who">${esc(who)}${m.to&&m.role==='owner'?' → '+esc(names(m.to==='both'?'claude':m.to))+(m.to==='both'?' и директору':''):''}</div>`:''}${esc(m.text)}${media}</div>`}).join('');
+    const who=names(m.role);return `<div class="msg ${esc(m.role)}">${who?`<div class="who">${esc(who)}${m.to&&m.role==='owner'?' → '+(m.to==='team'?'команде':esc(names(m.to==='both'?'claude':m.to)))+(m.to==='both'?' и директору':'')+(m.to==='team'?'':''):''}</div>`:''}${esc(m.text)}${media}</div>`}).join('');
   f.innerHTML=(msgs||'<div class="empty">Напишите задачу: «собери ролик», «что улучшить в хуке?», «найди в базе кейсы по фитнесу»</div>')+pend;
   if(atBottom||!f.dataset.init){f.scrollTop=f.scrollHeight;f.dataset.init=1}
 }

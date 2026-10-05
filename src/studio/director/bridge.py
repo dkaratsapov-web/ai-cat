@@ -18,7 +18,7 @@ from ..db import DB
 from ..editing import ffmpeg
 from ..project import Project
 from . import qc, state
-from .openai_client import DirectorUnavailable, MockDirector, OpenAIDirector, build_request, output_text
+from .openai_client import DirectorUnavailable, MockDirector, OpenAIDirector, _image_part, build_request, output_text
 from .review import write_cost_csv
 
 KINDS = ("script_review", "scene_review", "final_review")
@@ -109,8 +109,36 @@ class Bridge:
         hits = search(self.p.settings, query, limit=5)
         return "\n\n".join(f"[{h['section']}] {h['path']}:\n{h['snippet']}" for h in hits) or "(ничего не найдено)"
 
-    def ask(self, question: str, *, log_question: bool = True) -> str | None:
-        """Свободный вопрос владельца директору в той же переписке эпизода. Ответ — обычный текст."""
+    def _visuals(self) -> tuple[list[Path], str]:
+        """Что директор видит при аудите: готовый ролик (контактный лист + ключевые кадры, субтитры, карта сцен),
+        а если ролика ещё нет — раскадровку по кадрам сцен."""
+        video = self.p.final_video
+        if video.exists():
+            pkg = self._pkg("audit")
+            export_final_package(self.p, self.db, pkg, video)
+            imgs = [pkg / "contact_sheet.jpg"] + sorted((pkg / "keyframes").glob("*.jpg"))[:8]
+            srt = (pkg / "subtitles.srt").read_text(encoding="utf-8") if (pkg / "subtitles.srt").exists() else ""
+            sm = (pkg / "scene_map.json").read_text(encoding="utf-8") if (pkg / "scene_map.json").exists() else ""
+            return [i for i in imgs if i.exists()], (f"ВИЗУАЛ: собранный ролик — контактный лист (кадр каждые 2.5 с с "
+                                                     f"таймкодами) и ключевые кадры.\nКАРТА СЦЕН:\n{sm}\nСУБТИТРЫ:\n{srt[:6000]}")
+        script = self.p.load_script()
+        lib = CharacterLibrary(self.p.settings)
+        refs, labels = [], []
+        for sc in script.scenes:
+            if sc.reference:
+                try:
+                    _r, path = lib.resolve(sc.reference)
+                    refs.append(Path(path)); labels.append(sc.id)
+                except Exception:  # noqa: BLE001
+                    pass
+        if not refs:
+            return [], "ВИЗУАЛ: ролик ещё не собран, кадров нет."
+        sheet = qc.sheet(refs, labels, self._pkg("audit") / "storyboard_sheet.jpg", cols=5, cell_w=220)
+        return [sheet], "ВИЗУАЛ: ролик ещё не собран — раскадровка (исходный кадр каждой сцены)."
+
+    def ask(self, question: str, *, log_question: bool = True, audit: bool = False) -> str | None:
+        """Свободный вопрос владельца директору в той же переписке эпизода. Ответ — обычный текст.
+        audit=True: директор первым смотрит работу (кадры) и даёт аудит + приоритетный список правок для Claude."""
         from . import chat
         if log_question:
             chat.append(self.p, "owner", question)
@@ -128,14 +156,26 @@ class Bridge:
             init_director_notes(self.p, {"project": self.p.id, "goal": {"audience": script.audience, "cta": script.cta,
                                                                         "objective": script.topic}})
         notes = self._notes()
-        text = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nЭто свободный вопрос: отвечай обычным текстом по-русски, НЕ JSON, "
-                f"коротко и по делу. Если данных не хватает — скажи, каких именно. Платные действия только предлагай, "
-                f"решает владелец.\n\nЭПИЗОД: {script.title}, CTA: {script.cta}\nСЦЕНЫ И СТАТУСЫ:\n```json\n"
+        images: list[Path] = []
+        visual = ""
+        if audit:
+            images, visual = self._visuals()
+            head = (f"ЗАДАЧА ВЛАДЕЛЬЦА: {question}\n\nТы смотришь работу ПЕРВЫМ, до продюсера (Claude). Отвечай обычным "
+                    "текстом по-русски, НЕ JSON. Дай аудит: 1) что работает; 2) проблемы — с таймкодами/сценами и "
+                    "почему это вредит удержанию; 3) приоритетный список правок для продюсера, отдельно бесплатные "
+                    "(монтаж, текст, плашки, тайминг) и платные (перегенерация сцен). Опирайся на кадры, не выдумывай.\n\n"
+                    f"{visual}\n\n")
+        else:
+            head = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nЭто свободный вопрос: отвечай обычным текстом по-русски, НЕ JSON, "
+                    f"коротко и по делу. Если данных не хватает — скажи, каких именно. Платные действия только предлагай, "
+                    f"решает владелец.\n\n")
+        text = (head + f"ЭПИЗОД: {script.title}, CTA: {script.cta}\nСЦЕНЫ И СТАТУСЫ:\n```json\n"
                 f"{json.dumps(scenes, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{notes}\n\n"
                 f"ПОСЛЕДНИЕ СООБЩЕНИЯ ЧАТА (владелец, директор, Claude-продюсер):\n{chat.recent_text(self.p, 12)}"
                 f"\n\nБАЗА ЗНАНИЙ — фрагменты по теме вопроса (опирайся на них, не выдумывай):\n{self._kb(question)}")
         body = {"model": self.cfg["model"], "instructions": self.instructions(),
-                "input": [{"role": "user", "content": [{"type": "input_text", "text": text}]}],
+                "input": [{"role": "user", "content": [{"type": "input_text", "text": text}] +
+                           [_image_part(i, self.cfg.get("image_detail", "auto")) for i in images[: int(self.cfg.get("max_images", 12))]]}],
                 "store": bool(self.cfg.get("store", True)), "max_output_tokens": int(self.cfg.get("max_output_tokens", 4000))}
         if self.mode == "openai" and conv.get("last_response_id"):
             body["previous_response_id"] = conv["last_response_id"]
@@ -155,7 +195,7 @@ class Bridge:
                     response_id=resp.get("id"))
         if self.mode == "openai":
             conv["last_response_id"] = resp.get("id")
-        conv["history"].append({"kind": "ask", "scene": "", "response_id": resp.get("id"), "at": _now(), "mode": self.mode})
+        conv["history"].append({"kind": "audit" if audit else "ask", "scene": "", "response_id": resp.get("id"), "at": _now(), "mode": self.mode})
         self._conv_path().parent.mkdir(parents=True, exist_ok=True)
         self._conv_path().write_text(json.dumps(conv, ensure_ascii=False, indent=1), encoding="utf-8")
         return answer
