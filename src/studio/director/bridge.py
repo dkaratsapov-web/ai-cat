@@ -109,12 +109,23 @@ class Bridge:
         from . import chat
         chat.append(self.p, "owner", question)
         conv = self._conv()
-        statuses = {sid: {"status": x.get("status"), "v": x.get("versions", 0),
-                          "director": (x.get("director") or {}).get("status"),
-                          "qc": (x.get("identity_qc") or {}).get("verdict")} for sid, x in state.load(self.p).items()}
-        text = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nОтветь по-русски, коротко и по делу. Если предлагаешь платное "
-                f"действие — так и скажи, решает владелец.\n\nСТАТУСЫ СЦЕН:\n```json\n"
-                f"{json.dumps(statuses, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{self._notes()}")
+        stall = state.sync_from_jobs(self.p, self.db)   # статусы есть и у проектов, созданных не из брифа
+        script = self.p.load_script()
+        scenes = [{"id": sc.id, "type": sc.type, "generator": sc.generator, "reference": sc.reference,
+                   "voiceover": sc.voiceover, "status": (stall.get(sc.id) or {}).get("status"),
+                   "version": (stall.get(sc.id) or {}).get("versions", 0),
+                   "director": ((stall.get(sc.id) or {}).get("director") or {}).get("status"),
+                   "identity_qc": ((stall.get(sc.id) or {}).get("identity_qc") or {}).get("verdict")}
+                  for sc in script.scenes]
+        if not (self.p.path / "director" / "director_notes.md").exists():   # проект не из брифа — заводим заметки
+            from .brief import init_director_notes
+            init_director_notes(self.p, {"project": self.p.id, "goal": {"audience": script.audience, "cta": script.cta,
+                                                                        "objective": script.topic}})
+        notes = self._notes()
+        text = (f"ВОПРОС ВЛАДЕЛЬЦА: {question}\n\nЭто свободный вопрос: отвечай обычным текстом по-русски, НЕ JSON, "
+                f"коротко и по делу. Если данных не хватает — скажи, каких именно. Платные действия только предлагай, "
+                f"решает владелец.\n\nЭПИЗОД: {script.title}, CTA: {script.cta}\nСЦЕНЫ И СТАТУСЫ:\n```json\n"
+                f"{json.dumps(scenes, ensure_ascii=False)}\n```\n\nDIRECTOR NOTES:\n{notes}")
         body = {"model": self.cfg["model"], "instructions": self.instructions(),
                 "input": [{"role": "user", "content": [{"type": "input_text", "text": text}]}],
                 "store": bool(self.cfg.get("store", True)), "max_output_tokens": int(self.cfg.get("max_output_tokens", 4000))}
@@ -126,6 +137,12 @@ class Bridge:
             print(f"Директор недоступен: {e}")
             return None
         answer = output_text(resp).strip()
+        try:   # модель могла по привычке ответить JSON-ом — достаём текст
+            j = json.loads(answer)
+            if isinstance(j, dict):
+                answer = "\n".join(str(v) for k, v in j.items() if v and k != "requires_user_approval")
+        except ValueError:
+            pass
         chat.append(self.p, "director", answer + (" (заглушка)" if self.mode == "mock" else ""),
                     response_id=resp.get("id"))
         if self.mode == "openai":
