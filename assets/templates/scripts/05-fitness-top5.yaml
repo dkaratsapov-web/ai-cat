@@ -409,7 +409,7 @@ scenes:
   duration: 5
   generator: kling
   reference: fit_logo
-  voiceover: Покупают тренера, атмосферу, доверие и желание быть частью этого места.
+  voiceover: Покупают вайб тренера, атмосферу, доверие и желание быть частью этого места.
   visual: '[студия] Кот у логотипа говорит в камеру — кульминация'
   prompts:
     kling: The cat talks to the camera with warm conviction, slow nods, blinks naturally, small head turns, calm
