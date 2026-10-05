@@ -104,14 +104,26 @@ def collect(project: Project, db: DB | None = None) -> list[dict]:
         msgs.append({"role": "director", "at": rec.get("at"), "scene": rec.get("scene"),
                      "text": _review_text(rec.get("kind", ""), rec.get("scene", ""), rec.get("review") or {}) + tag})
     if db is not None:
+        # Задачи одного вида, завершённые в одну минуту, — одним сообщением (иначе озвучка засыпает ленту)
+        groups: dict[tuple, list[dict]] = {}
         for j in db.jobs_for(project.id):
             if j["status"] not in ("succeeded", "failed"):
                 continue
-            cost = float(j.get("actual_cost_usd") or j.get("est_cost_usd") or 0) if j.get("paid") else 0
-            word = "готова" if j["status"] == "succeeded" else "ошибка"
-            msgs.append({"role": "claude", "at": j.get("updated_at"), "scene": j["scene_id"],
-                         "text": f"{j['scene_id']}: генерация {word} · {j['provider']} {j.get('model') or ''}"
-                                 + (f" · ${cost:.2f}" if cost else "")})
+            key = (j.get("kind"), j["provider"], j.get("model") or "", j["status"], (j.get("updated_at") or "")[:16])
+            groups.setdefault(key, []).append(j)
+        for (kind, prov, model, status, _m), jobs in groups.items():
+            what = {"tts": "Озвучка", "import": "Импорт сцены"}.get(kind, "Генерация видео")
+            word = "готова" if status == "succeeded" else "ОШИБКА"
+            parts, total = [], 0.0
+            for j in jobs:
+                cost = float(j.get("actual_cost_usd") or j.get("est_cost_usd") or 0) if j.get("paid") else 0.0
+                total += cost
+                parts.append(j["scene_id"] + (f" ${cost:.2f}" if cost else ""))
+            text = f"{what} {word} · {prov} {model}\n" + ", ".join(parts)
+            if total:
+                text += f"\nИтого: ${total:.2f}"
+            msgs.append({"role": "claude", "at": jobs[-1].get("updated_at"),
+                         "scene": jobs[0]["scene_id"] if len(jobs) == 1 else "", "text": text})
     log = chat_log(project)
     if log.exists():
         for line in log.read_text(encoding="utf-8").splitlines():
