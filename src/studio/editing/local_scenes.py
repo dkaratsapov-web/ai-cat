@@ -178,19 +178,26 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
             p = min(p, 1 - ease_io((t - float(until)) / 0.3))
         size = int(ov.get("size", TITLE_SIZE))
         f = fonts.font(settings.fonts_dir, size)
-        max_w = w - sa["left"] - sa["right"] - 56
-        lines = wrap(d, ov["text"], f, max_w)
+        logo = _logo(settings, ov.get("image"), int(size * 1.25)) if ov.get("image") else None
+        logo_w = (logo.width + 20) if logo else 0
+        max_w = w - sa["left"] - sa["right"] - 56 - logo_w
+        lines = wrap(d, ov["text"], f, max_w) if ov.get("text") else [""]
         lh = int(size * 1.18)
-        box_w = max(d.textlength(line, font=f) for line in lines) + 56
-        box_h = lh * len(lines) + 36
+        text_w = max(d.textlength(line, font=f) for line in lines)
+        box_w = text_w + 56 + logo_w
+        box_h = max(lh * len(lines), logo.height if logo else 0) + 36
         x0 = (w - box_w) / 2
         y0 = float(ov.get("y", sa["top"] + 40)) + (1 - p) * 30
         a = int(255 * p)
         d.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=28, fill=(14, 16, 22, int(205 * p)))
+        if logo:   # значок платформы слева от текста, с той же прозрачностью
+            lg = logo.copy()
+            lg.putalpha(lg.getchannel("A").point(lambda v, k=p: int(v * k)))
+            layer.alpha_composite(lg, (int(x0 + 28), int(y0 + (box_h - lg.height) / 2)))
         hl = str(ov.get("accent", "")).lower()
-        yy = y0 + 16
+        yy = y0 + 16 + max(0, ((logo.height if logo else 0) - lh * len(lines)) / 2)
         for line in lines:
-            xx = (w - d.textlength(line, font=f)) / 2
+            xx = x0 + 28 + logo_w + (text_w - d.textlength(line, font=f)) / 2
             for word in line.split(" "):
                 plain = word.strip("«»\"'.,!?:;").lower()
                 color = accent if hl and plain and plain in hl.split() else (255, 255, 255)
@@ -200,6 +207,27 @@ def draw_overlays(img: Image.Image, settings: Settings, overlays: list, t: float
     base = img.convert("RGBA")
     base.alpha_composite(layer)
     return base.convert("RGB")
+
+
+_LOGOS: dict = {}
+
+
+def _logo(settings: Settings, name: str, size: int) -> Image.Image | None:
+    """Логотип платформы из assets/logos (только оттуда), скруглённый квадрат size×size."""
+    key = (name, size)
+    if key not in _LOGOS:
+        base = (settings.assets_dir / "logos").resolve()
+        p = (base / f"{name}.png").resolve()
+        if not p.is_relative_to(base) or not p.is_file():
+            print(f"    ! логотип {name} не найден в assets/logos")
+            _LOGOS[key] = None
+        else:
+            im = Image.open(p).convert("RGBA").resize((size, size), Image.LANCZOS)
+            mask = Image.new("L", (size, size), 0)
+            ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=size // 4, fill=255)
+            im.putalpha(Image.composite(im.getchannel("A"), Image.new("L", (size, size), 0), mask))
+            _LOGOS[key] = im
+    return _LOGOS[key]
 
 
 def resolve_image(project_path: Path, settings: Settings, rel: str) -> Path:

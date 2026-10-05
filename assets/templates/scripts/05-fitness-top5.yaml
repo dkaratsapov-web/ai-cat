@@ -55,6 +55,7 @@ scenes:
       size: 72
       y: 250
       accent: '5'
+      image: yandex_direct
 - id: s03
   type: character_motion
   duration: 3
@@ -91,6 +92,7 @@ scenes:
       size: 72
       y: 250
       accent: '4'
+      image: telegram
 - id: s05
   type: character_motion
   duration: 5
@@ -129,6 +131,7 @@ scenes:
       size: 72
       y: 250
       accent: '3'
+      image: vk_ads
 - id: s07
   type: character_motion
   duration: 4
@@ -165,6 +168,7 @@ scenes:
       size: 72
       y: 250
       accent: '2'
+      image: yandex_maps
 - id: s09
   type: character_motion
   duration: 5
@@ -219,20 +223,24 @@ scenes:
     overlays:
     - text: Запретграмм
       at: запретграмм
-      size: 48
-      y: 240
+      size: 52
+      y: 230
+      image: instagram
     - text: VK
       at: vk
-      size: 48
-      y: 320
+      size: 52
+      y: 340
+      image: vk
     - text: Telegram
       at: telegram
-      size: 48
-      y: 400
+      size: 52
+      y: 450
+      image: telegram
     - text: MAX
       at: мах
-      size: 48
-      y: 480
+      size: 52
+      y: 560
+      image: max
     model: bytedance/seedance-2.0/image-to-video
 - id: s13
   type: character_motion
