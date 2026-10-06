@@ -259,7 +259,7 @@ def cmd_voice_samples(a, s):
     from .generation.voice import load_preset
     from .integrations import tts_provider
     from .integrations.base import ProviderError
-    from .integrations.tts import apply_voice_effect
+    from .integrations.tts import OPENAI_CAT_STYLES, apply_voice_effect
     prov = tts_provider(a.provider, s)
     ok, why = prov.configured()
     if not ok:
@@ -271,33 +271,42 @@ def cmd_voice_samples(a, s):
         voices = _split(a.voices) or ["ash", "ballad", "cedar", "echo", "onyx", "verse", "marin", "alloy"]
     else:
         voices = _split(a.voices) or list(DEFAULT_SAMPLE_VOICES)
+    styles = _split(a.styles) if a.provider == "openai" else []
+    if styles == ["all"]:
+        styles = list(OPENAI_CAT_STYLES)
+    bad = [x for x in styles if x not in OPENAI_CAT_STYLES]
+    if bad:
+        raise RuntimeError(f"Нет стилей {bad}. Есть: {', '.join(OPENAI_CAT_STYLES)}")
+    runs = [(v, st) for v in voices for st in (styles or [None])]
     base = dict(load_preset(s, "default"))
     pricing = s.load_yaml("config/pricing.yaml")
     per = prov.estimate_usd(a.text, base, pricing)
     rub = per * float(pricing.get("yandex", {}).get("rub_per_usd", 90))
     if a.provider in ("salute", "openai") and not per:
-        print(f"{len(voices)} образцов {a.provider} — цена по тарифу в кабинете сервиса (в прайс студии не внесена; это центы)")
+        print(f"{len(runs)} образцов {a.provider} — цена по тарифу в кабинете сервиса (в прайс студии не внесена; это центы)")
     else:
-        print(f"{len(voices)} образцов × ~{rub:.2f} ₽ ≈ {rub * len(voices):.1f} ₽")
+        print(f"{len(runs)} образцов × ~{rub:.2f} ₽ ≈ {rub * len(runs):.1f} ₽")
     if not Budget(s, _db(s)).confirm("Озвучить образцы?", a.yes):
         return 0
     out_dir = s.data_dir / "voice_samples"
     out_dir.mkdir(parents=True, exist_ok=True)
     db = _db(s)
     made = []
-    for v in voices:
+    for v, style in runs:
         preset = {**base, "voice": v, "role": a.role, "speed": a.speed, "pitch_shift": a.pitch}
         if a.provider == "salute":
             preset = {"voice": v, "speed": a.speed}
         elif a.provider == "openai":
-            preset = {"voice": v, "speed": a.speed, "model_id": "gpt-4o-mini-tts",
-                      **({"instructions": a.instructions} if a.instructions else {})}
-        tag = "_".join(x for x in (v, a.role or "", f"p{int(a.pitch)}" if a.pitch else "", f"s{a.speed}") if x)
+            instr = OPENAI_CAT_STYLES[style] if style else a.instructions
+            preset = {"voice": v, "speed": a.speed, "model_id": a.model,
+                      **({"instructions": instr} if instr else {})}
+        tag = "_".join(x for x in (v, style or "", a.role or "", f"p{int(a.pitch)}" if a.pitch else "",
+                                   f"s{a.speed}") if x)
         dest = out_dir / f"{tag}.wav"
         try:
             prov.synthesize(a.text, preset, dest)
         except ProviderError as e:
-            print(f"  {v}: не получилось ({redact(str(e))[:120]})")
+            print(f"  {tag}: не получилось ({redact(str(e))[:120]})")
             continue
         db.create_job(episode="voice-samples", scene_id=v, provider=a.provider, kind="tts", model=v,
                       params={"chars": len(a.text)}, idempotency_key=f"sample-{tag}-{a.text}",
@@ -312,7 +321,7 @@ def cmd_voice_samples(a, s):
             shutil.copy2(dest, var)
             apply_voice_effect(var, factor, a.formant)
             names.append(var.name)
-        print(f"  {v}: {', '.join(names)}")
+        print(f"  {tag}: {', '.join(names)}")
     print(f"\nОбразцы: {out_dir}\nФайлы *_catX — тот же голос, обработанный локально (X — во сколько раз выше тон, "
           "бесплатно).\nНапишите, какой файл понравился, — впишем голос и эффект в config/voices.yaml.")
     if sys.platform == "win32" and made:
@@ -851,6 +860,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="shifted — мультяшный тембр; preserved — тот же голос, но выше")
     vs.add_argument("--provider", default="yandex", choices=["yandex", "openai", "salute"])
     vs.add_argument("--instructions", help="(openai) как говорить: «ироничный кот-маркетолог, бодро»")
+    vs.add_argument("--styles", help="(openai) характеры кота через запятую или all: "
+                    "cartoon, sly, kid, lazy, host, nerd — каждый голос озвучится каждым стилем")
+    vs.add_argument("--model", default="gpt-4o-mini-tts", help="(openai) gpt-4o-mini-tts | tts-1-hd | tts-1")
     vs.add_argument("--yes", action="store_true")
     vs.set_defaults(fn=cmd_voice_samples)
 

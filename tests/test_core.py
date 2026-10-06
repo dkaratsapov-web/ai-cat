@@ -716,3 +716,31 @@ def test_openai_tts_protocol(settings, monkeypatch, tmp_path):
     assert b["model"] == "gpt-4o-mini-tts" and b["voice"] == "ash" and b["response_format"] == "wav"
     assert b["instructions"] and b["speed"] == 1.1
     assert abs(res.duration - 2.0) < 0.1 and len(res.words) == 2
+
+
+def test_voice_samples_styles(settings, monkeypatch, tmp_path):
+    import io
+    import wave
+    from types import SimpleNamespace as NS
+    from studio import cli
+    from studio.integrations import tts
+    monkeypatch.setattr(tts, "secret", lambda n: "sk-test" if n == "OPENAI_API_KEY" else None)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(b"\x00\x00" * 24000)
+    bodies = []
+
+    def fake_post(url, json=None, headers=None, **kw):
+        bodies.append(json)
+        return NS(status_code=200, content=buf.getvalue(), text="")
+    monkeypatch.setattr(tts.requests, "post", fake_post)
+    a = NS(provider="openai", voices="ash,fable", styles="sly,kid", instructions=None, model="tts-1-hd",
+           text="Мяу! Топ-пять!", role=None, speed=1.0, pitch=0.0, variants="", formant="shifted", yes=True)
+    assert cli.cmd_voice_samples(a, settings) == 0
+    assert [(b["voice"], b["model"]) for b in bodies] == [("ash", "tts-1-hd")] * 2 + [("fable", "tts-1-hd")] * 2
+    assert all("instructions" not in b for b in bodies)        # tts-1 не принимает подачу
+    a.model, bodies[:] = "gpt-4o-mini-tts", []
+    a.voices = "ash"
+    cli.cmd_voice_samples(a, settings)
+    assert bodies[0]["instructions"] == tts.OPENAI_CAT_STYLES["sly"]
+    assert (settings.data_dir / "voice_samples" / "ash_kid_s1.0.wav").exists()
