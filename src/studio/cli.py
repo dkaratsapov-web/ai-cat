@@ -355,8 +355,11 @@ def cmd_video_edit(a, s):
         print(f"  … {st.status}, {int(time.time() - t0)} с", flush=True)
         time.sleep(15)
     if st.status == "failed":
-        db.update_job(job["id"], status="failed", error=st.message)
+        # failed/nsfw Higgsfield не списывает (деньги возвращаются) — в расходы студии не пишем
+        db.update_job(job["id"], status="failed", error=st.message, actual_cost_usd=0)
         print(redact(st.message))
+        if "balance" in st.message.lower() or "credit" in st.message.lower():
+            print("Пополните баланс в кабинете Higgsfield и запустите ту же команду снова (без --again).")
         return 1
     prov.download(st.video_url, dest)
     db.update_job(job["id"], status="succeeded", result_url=st.video_url, result_path=str(dest))

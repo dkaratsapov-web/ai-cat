@@ -780,3 +780,12 @@ def test_video_edit_paid_flow(settings, monkeypatch, tmp_path):
     assert cli.cmd_video_edit(a, settings) == 0 and calls["submit"] == 1   # повтор не платит второй раз
     a.dry_run, a.again = True, True
     assert cli.cmd_video_edit(a, settings) == 0 and calls["submit"] == 1
+    # отказ сервиса (нет кредитов) — не расход, и повторный запуск разрешён без --again
+    monkeypatch.setattr(higgsfield.HiggsfieldProvider, "poll",
+                        lambda self, rid, kind, context=None: TaskState(task_id=rid, status="failed",
+                                                                        message="Higgsfield: failed; credit balance is too low"))
+    a.dry_run, a.again, a.prompt = False, False, "put logo v2"
+    spent = cli._db(settings).spend(episode="video-edit")
+    assert cli.cmd_video_edit(a, settings) == 1 and calls["submit"] == 2
+    assert cli._db(settings).spend(episode="video-edit") == spent
+    assert cli.cmd_video_edit(a, settings) == 1 and calls["submit"] == 3
