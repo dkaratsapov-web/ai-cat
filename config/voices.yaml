@@ -38,6 +38,14 @@ presets:
     pitch_shift: 0
     effect: {pitch: 1.5, formant: shifted}
 
+  # --- Сбер SaluteSpeech (тест: studio voice-samples --provider salute) ---
+  # Голоса 24 кГц: Bys_24000 Борис, Tur_24000 Тарас, Pon_24000 Сергей (мужские); Nec_24000 Наталья,
+  # May_24000 Марфа, Ost_24000 Александра. Темп меняется локально (без искажения тона).
+  salute:
+    provider: salute
+    voice: Bys_24000
+    speed: 1.1
+
   # --- ElevenLabs (альтернатива: studio voice <id> --provider elevenlabs, voice_preset: elevenlabs) ---
   elevenlabs:
     provider: elevenlabs

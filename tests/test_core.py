@@ -661,3 +661,35 @@ def test_bot_producer_tools_and_paid_guard(settings, monkeypatch):
     tool_result = seen[1]["messages"][2]["content"][0]["content"]   # user → tool_use → tool_result
     assert tool_result.startswith("ОТКАЗ") and "request_paid" in tool_result   # платное без кнопки не запускается
     assert seen[0]["fallbacks"] == "default" and seen[0]["model"] == cfg["producer"]["model"]
+
+
+def test_salute_tts_protocol(settings, monkeypatch, tmp_path):
+    import io
+    import wave
+    from types import SimpleNamespace as NS
+    from studio.integrations import tts
+    monkeypatch.setenv("SALUTE_AUTH_KEY", "QmFzaWNLZXk=")
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(b"\x00\x00" * 24000)
+    calls = []
+
+    def fake_post(url, **kw):
+        calls.append((url, kw))
+        if "oauth" in url:
+            return NS(status_code=200, json=lambda: {"access_token": "TOK", "expires_at": 4102444800000}, text="")
+        return NS(status_code=200, content=buf.getvalue(), text="")
+    monkeypatch.setattr(tts.requests, "post", fake_post)
+    p = tts.SaluteTTS(settings)
+    res = p.synthesize("Мяу, привет", {"voice": "Bys_24000", "speed": 1.0}, tmp_path / "a.wav")
+    p.synthesize("Ещё раз", {"voice": "Bys_24000"}, tmp_path / "b.wav")
+    oauth = [c for c in calls if "oauth" in c[0]]
+    assert len(oauth) == 1                                         # токен переиспользуется
+    assert oauth[0][1]["headers"]["Authorization"] == "Basic QmFzaWNLZXk="
+    assert oauth[0][1]["data"] == {"scope": "SALUTE_SPEECH_PERS"} and oauth[0][1]["headers"]["RqUID"]
+    synth = calls[1]
+    assert synth[1]["params"] == {"format": "wav16", "voice": "Bys_24000"}
+    assert synth[1]["headers"]["Authorization"] == "Bearer TOK"
+    assert synth[1]["headers"]["Content-Type"] == "application/text"
+    assert abs(res.duration - 1.0) < 0.1 and [w[0] for w in res.words] == ["Мяу,", "привет"]
+    assert 0 < res.words[0][1] < res.words[1][1] < res.duration

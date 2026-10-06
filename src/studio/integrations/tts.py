@@ -296,3 +296,108 @@ class MockTTS(TTSProvider):
             words.append((w, t, t + step))
             t += step
         return TTSResult(audio_path=dest, duration=dur, words=words, characters=len(text))
+
+
+SALUTE_OAUTH = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+SALUTE_SYNTH = "https://smartspeech.sber.ru/rest/v1/text:synthesize"
+SALUTE_VOICES = {   # 24 кГц; мужские — для кота
+    "Bys_24000": "Борис", "Tur_24000": "Тарас", "Pon_24000": "Сергей",
+    "Nec_24000": "Наталья", "May_24000": "Марфа", "Ost_24000": "Александра",
+}
+
+
+class SaluteTTS(TTSProvider):
+    """Сбер SaluteSpeech, синтез по REST.
+
+    Токен: POST ngw.devices.sberbank.ru:9443/api/v2/oauth, заголовки Authorization: Basic <ключ авторизации из
+    личного кабинета>, RqUID: <uuid4>, тело scope=SALUTE_SPEECH_PERS (физлицо) или SALUTE_SPEECH_CORP; ответ —
+    access_token, expires_at (мс). Так получает токен открытый пакет salute-speech 2.0.0 (PyPI, MIT).
+    Синтез: POST smartspeech.sber.ru/rest/v1/text:synthesize?format=wav16&voice=<голос>, Authorization: Bearer,
+    Content-Type: application/text (или application/ssml) → WAV. Серверы Сбера подписаны НУЦ Минцифры —
+    проверка TLS по assets/certs/russian_trusted_root_ca.pem. Пословных таймингов сервис не отдаёт.
+    """
+    name = "salute"
+
+    def __init__(self, settings=None):
+        self.settings = settings
+        self._token: tuple[str, float] | None = None
+
+    def configured(self) -> tuple[bool, str]:
+        return (True, "ключ авторизации SaluteSpeech") if secret("SALUTE_AUTH_KEY") else \
+            (False, "Нет SALUTE_AUTH_KEY в .env (ключ авторизации из личного кабинета SaluteSpeech)")
+
+    def _verify(self) -> str | bool:
+        root = getattr(self.settings, "root", None) or Path.cwd()
+        pem = Path(root) / "assets" / "certs" / "russian_trusted_root_ca.pem"
+        return str(pem) if pem.exists() else True
+
+    def _bearer(self) -> str:
+        import time
+        import uuid
+        if self._token and self._token[1] - 60 > time.time():
+            return self._token[0]
+        key = secret("SALUTE_AUTH_KEY")
+        if not key:
+            raise NotConfiguredError("Нет SALUTE_AUTH_KEY")
+        scope = secret("SALUTE_SCOPE") or "SALUTE_SPEECH_PERS"
+        try:
+            r = requests.post(SALUTE_OAUTH, data={"scope": scope}, timeout=30, verify=self._verify(),
+                              headers={"Authorization": f"Basic {key}", "RqUID": str(uuid.uuid4()),
+                                       "Content-Type": "application/x-www-form-urlencoded"})
+        except requests.RequestException as e:
+            raise ProviderError(f"SaluteSpeech: не удалось получить токен: {type(e).__name__}", retryable=True) from e
+        if r.status_code >= 400:
+            raise ProviderError(f"SaluteSpeech токен: HTTP {r.status_code}: {r.text[:200]}", status=r.status_code)
+        j = r.json()
+        self._token = (j["access_token"], int(j.get("expires_at", 0)) / 1000 or time.time() + 1500)
+        return self._token[0]
+
+    def estimate_usd(self, text: str, preset: dict, pricing: dict) -> float:
+        p = pricing.get("salute", {})
+        rub = len(text) / 1000 * float(p.get("rub_per_1000_chars", 0) or 0)
+        return round(rub / float(pricing.get("yandex", {}).get("rub_per_usd", 90)), 5)
+
+    def synthesize(self, text: str, preset: dict, dest: Path, **_: Any) -> TTSResult:
+        voice = preset.get("voice") or "Bys_24000"
+        if voice not in SALUTE_VOICES and not voice.endswith("_24000"):
+            raise NotConfiguredError(f"Голос «{voice}» не из SaluteSpeech (например Bys_24000)")
+        ctype = "application/ssml" if text.lstrip().startswith("<speak") else "application/text"
+        try:
+            r = requests.post(SALUTE_SYNTH, params={"format": "wav16", "voice": voice}, data=text.encode("utf-8"),
+                              timeout=120, verify=self._verify(),
+                              headers={"Authorization": f"Bearer {self._bearer()}", "Content-Type": ctype})
+        except requests.RequestException as e:
+            raise ProviderError(f"SaluteSpeech недоступен: {type(e).__name__}", retryable=True) from e
+        if r.status_code >= 400:
+            raise ProviderError(f"SaluteSpeech HTTP {r.status_code}: {r.text[:300]}", status=r.status_code)
+        if not r.content:
+            raise ProviderError("SaluteSpeech не вернул аудио")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        raw = dest.with_suffix(".src.wav")
+        raw.write_bytes(r.content)
+        speed = float(preset.get("speed") or 1.0)
+        af = ["-af", f"atempo={speed:.3f}"] if abs(speed - 1.0) > 0.01 else []   # темп — локально, без искажения тона
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(raw), *af, "-ac", "1",
+                        "-ar", "48000", str(dest)], check=True)
+        raw.unlink(missing_ok=True)
+        dur = ffmpeg.duration(dest)
+        return TTSResult(audio_path=dest, duration=dur, words=approx_word_timings(text, dur), characters=len(text))
+
+    def account_info(self) -> dict[str, Any]:
+        return {"note": "остаток и тариф — в личном кабинете SaluteSpeech (developers.sber.ru)"}
+
+
+def approx_word_timings(text: str, duration: float, lead: float = 0.12, tail: float = 0.18) -> list[tuple[str, float, float]]:
+    """Сервис без пословных таймингов: раскладываем слова пропорционально длине (знаки препинания — пауза).
+    Нужно, чтобы плашки и подсветки, привязанные к словам («at: директ»), вставали примерно в своё место."""
+    words = re.findall(r"\S+", re.sub(r"<[^>]+>", " ", text))
+    if not words:
+        return []
+    weights = [len(w) + 2 + (3 if re.search(r"[.,!?…:;—]$", w) else 0) for w in words]
+    span = max(duration - lead - tail, 0.3)
+    scale = span / sum(weights)
+    out, t = [], lead
+    for w, wt in zip(words, weights):
+        out.append((w, round(t, 3), round(t + (len(w) + 2) * scale, 3)))
+        t += wt * scale
+    return out

@@ -71,3 +71,12 @@ elevenlabs:
   usd_per_1k_chars: 0.18
   credits_per_char: {eleven_multilingual_v2: 1.0, eleven_v3: 1.0, eleven_flash_v2_5: 0.5}
   subscription_based: true           # расход идёт из уже оплаченной подписки, а не сверх неё
+
+salute:
+  # Сбер SaluteSpeech (синтез). Тариф в этот файл не внесён: цену не нашёл в официальных источниках, доступных
+  # из моей среды. Смотрите в личном кабинете (developers.sber.ru → SaluteSpeech → тариф) и впишите сюда,
+  # тогда смета студии станет точной. Пока стоит 0 — подтверждение перед озвучкой всё равно спрашивается.
+  rub_per_1000_chars: 0
+  source: https://developers.sber.ru/docs/ru/salutespeech/overview
+  checked: 2026-10-06
+  verified: false

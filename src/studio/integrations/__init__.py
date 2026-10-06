@@ -24,11 +24,13 @@ def video_provider(name: str, settings) -> VideoProvider:
 
 
 def tts_provider(name: str, settings) -> TTSProvider:
-    from .tts import ElevenLabsTTS, ManualTTS, MockTTS, YandexTTS
+    from .tts import ElevenLabsTTS, ManualTTS, MockTTS, SaluteTTS, YandexTTS
     if name == "yandex":
         return YandexTTS(settings)
     if name == "elevenlabs":
         return ElevenLabsTTS(settings)
+    if name == "salute":
+        return SaluteTTS(settings)
     if name == "manual":
         return ManualTTS(settings)
     if name == "mock":
@@ -37,4 +39,4 @@ def tts_provider(name: str, settings) -> TTSProvider:
 
 
 VIDEO_PROVIDERS = ("kling", "higgsfield", "hedra", "runway", "mock")
-TTS_PROVIDERS = ("yandex", "elevenlabs", "manual", "mock")
+TTS_PROVIDERS = ("yandex", "salute", "elevenlabs", "manual", "mock")
