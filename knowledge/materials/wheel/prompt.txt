@@ -1,0 +1,6 @@
+Replace the animated LED heart pattern on the Ferris wheel with the logo from the reference image @image_1,
+displayed by the wheel's own LED lights: glowing pink-white neon lines, centered on the wheel hub and filling
+about two thirds of the wheel. The big letters "A|M" and the word "concept" stay sharp, correctly spelled,
+readable and not mirrored. The logo glows and gently pulses like the original LEDs, and its pink light is
+reflected in the water below. Keep everything else exactly as in the source video: the same drone flight
+toward the wheel, camera movement and timing, the night sky, the shore lights and the rippling water.

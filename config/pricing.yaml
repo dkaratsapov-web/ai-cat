@@ -34,6 +34,8 @@ higgsfield:
     bytedance/seedance-2.5/image-to-video: {usd_per_second: {480p: 0.2057, 720p: 0.2057}}
     bytedance/seedance-2.0/image-to-video: {usd_per_second: {480p: 0.1407, 720p: 0.1407}}
     # v1/speak/higgsfield — цена неизвестна: внесите из кабинета перед тестом
+    # Kling Omni Video Edit (studio video-edit) — цена неизвестна: смотрите в кабинете и передайте --price-usd
+    # или впишите сюда: kling-video/omni/video-edit: {usd_per_second: <цена>}
 
 hedra:
   source: https://www.hedra.com/models/video/hedra/character-3

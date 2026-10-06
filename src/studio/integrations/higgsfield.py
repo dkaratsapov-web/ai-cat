@@ -126,6 +126,22 @@ class HiggsfieldProvider(VideoProvider):
             raise ProviderError(f"Higgsfield не вернул request_id: {str(data)[:300]}")
         return str(rid)
 
+    def video_edit(self, model: str, video: Path, images: list[Path], prompt: str) -> str:
+        """Правка готового ролика (Kling Omni Video Edit): POST /kling-video/omni/video-edit.
+
+        По docs.higgsfield.ai/docs/models/kling-omni/video-edit: ровно одно видео 3–10 с, до 200 МБ (video_urls),
+        до 4 картинок (image_urls), prompt до 2500 символов. Задача платная — повторов при обрыве нет.
+        """
+        body: dict[str, Any] = {"prompt": prompt, "video_urls": [self._upload(video)]}
+        if images:
+            body["image_urls"] = [self._upload(i) for i in images]
+        data = http_json("POST", f"{BASE}/{model.lstrip('/')}", headers=self._headers(), json_body=body,
+                         timeout=90, safe_to_retry=False)
+        rid = data.get("request_id")
+        if not rid:
+            raise ProviderError(f"Higgsfield не вернул request_id: {str(data)[:300]}")
+        return str(rid)
+
     def poll(self, task_id: str, kind: str, context: dict | None = None) -> TaskState:
         st = http_json("GET", f"{BASE}/requests/{task_id}/status", headers=self._headers())
         raw = str(st.get("status", "")).lower()

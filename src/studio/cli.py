@@ -254,6 +254,115 @@ DEFAULT_SAMPLE_VOICES = ("alena", "jane", "dasha", "julia", "lera", "masha", "ma
 DEFAULT_SAMPLE_TEXT = "Директ сливает бюджет? Мяу. Сейчас разберёмся за тридцать секунд."
 
 
+VIDEO_EDIT_MODEL = "kling-video/omni/video-edit"
+
+
+def cmd_video_edit(a, s):
+    """Правка готового видео в Higgsfield (Kling Omni Video Edit): например, логотип на объекте в кадре."""
+    import hashlib
+    import math
+    from .editing import ffmpeg
+    from .integrations import video_provider
+    from .integrations.base import ProviderError
+    prov = video_provider("higgsfield", s)
+    db = _db(s)
+    video = Path(a.video)
+    images = [Path(x) for x in (a.image or [])]
+    prompt = Path(a.prompt_file).read_text(encoding="utf-8").strip() if a.prompt_file else (a.prompt or "").strip()
+    for f in [video, *images]:
+        if not f.is_file():
+            raise RuntimeError(f"Нет файла: {f}")
+    if not prompt:
+        raise RuntimeError("Нужен --prompt или --prompt-file")
+    if len(prompt) > 2500:
+        raise RuntimeError(f"Промпт {len(prompt)} символов, лимит модели 2500")
+    if len(images) > 4:
+        raise RuntimeError("Не больше 4 картинок (--image)")
+    dur = ffmpeg.duration(video)
+    if not 3 <= dur <= 10:
+        raise RuntimeError(f"Видео {dur:.1f} с, модель принимает 3–10 с — обрежьте ролик")
+    out_dir = s.data_dir / "video_edit"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(video.read_bytes() + b"".join(i.read_bytes() for i in images) + prompt.encode()).hexdigest()[:16]
+    key = f"video-edit-{a.model}-{digest}"
+    dest = Path(a.out) if a.out else out_dir / f"{video.stem.replace(' ', '_')}_edit_{digest[:6]}.mp4"
+
+    # уже запускали ровно это — не платим второй раз, а дожидаемся/скачиваем прежний результат
+    prev = [j for j in db.find_by_key(key) if j["status"] not in ("failed", "cancelled", "planned")]
+    if prev and not a.again:
+        job = prev[-1]
+        print(f"Эта правка уже запускалась (задача {job['external_task_id']}, статус {job['status']}) — "
+              "жду результат без новой оплаты. Новый платный запуск: --again")
+    else:
+        rate = ((s.load_yaml("config/pricing.yaml").get("higgsfield", {}).get("models", {}) or {})
+                .get(a.model) or {}).get("usd_per_second")
+        if a.price_usd is not None:
+            est, src = float(a.price_usd), "цена из кабинета Higgsfield (--price-usd)"
+        elif rate:
+            est, src = round(float(rate) * math.ceil(dur), 4), f"тариф из config/pricing.yaml: ${rate}/с"
+        else:
+            raise RuntimeError(
+                f"Цена {a.model} неизвестна, смету не посчитать. Посмотрите цену в кабинете Higgsfield "
+                "(cloud.higgsfield.ai → модель Kling Omni / O1 Edit) и повторите с --price-usd <сумма в $> "
+                "или впишите usd_per_second в config/pricing.yaml.")
+        ok, why = prov.configured()
+        print("Правка видео в Higgsfield — ПЛАТНО")
+        print(f"  модель:   {a.model}")
+        print(f"  видео:    {video.name} ({dur:.1f} с)")
+        print(f"  картинки: {', '.join(i.name for i in images) or '—'}")
+        print(f"  промпт:   {prompt[:300]}{'…' if len(prompt) > 300 else ''}")
+        print(f"  смета:    ${est:.2f} ({src})")
+        print(f"  результат: {dest}")
+        if not ok:
+            raise RuntimeError(f"Higgsfield не настроен: {why}")
+        if a.dry_run:
+            print("\n--dry-run: ничего не отправлено. Для запуска уберите --dry-run и добавьте --yes.")
+            return 0
+        budget = Budget(s, db)
+        for w in budget.check(a.episode, est):
+            print(w)
+        if not budget.confirm(f"Запустить правку за ~${est:.2f}?", a.yes):
+            return 0
+        src_mp4 = out_dir / f"src_{digest}.mp4"     # MOV с телефона → MP4 H.264 (так надёжнее принимают модели)
+        ffmpeg.run(["ffmpeg", "-y", "-v", "error", "-i", video, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
+                    "-crf", "18", "-c:a", "aac", "-movflags", "+faststart", src_mp4])
+        job_id = db.create_job(episode=a.episode, scene_id="video-edit", provider="higgsfield", kind="video_edit",
+                               model=a.model, params={"video": video.name, "images": [i.name for i in images],
+                                                      "prompt": prompt}, idempotency_key=key, est_cost_usd=est,
+                               status="submitting")
+        try:
+            rid = prov.video_edit(a.model, src_mp4, images, prompt)
+        except ProviderError as e:
+            db.update_job(job_id, status="unknown" if "Ambiguous" in type(e).__name__ else "failed", error=str(e))
+            raise
+        db.update_job(job_id, status="submitted", external_task_id=rid)
+        print(f"Задача создана: {rid}")
+        job = db.get_job(job_id)
+    rid = job["external_task_id"]
+    if not rid:
+        raise RuntimeError("У прежнего запуска нет id задачи — проверьте её в кабинете Higgsfield (History)")
+    t0 = time.time()
+    while True:
+        st = prov.poll(rid, "video_edit")
+        if st.status in ("succeeded", "failed"):
+            break
+        if time.time() - t0 > a.timeout:
+            print(f"Ещё не готово ({st.status}). Повторите ту же команду позже — новой оплаты не будет.")
+            return 1
+        print(f"  … {st.status}, {int(time.time() - t0)} с")
+        time.sleep(15)
+    if st.status == "failed":
+        db.update_job(job["id"], status="failed", error=st.message)
+        print(redact(st.message))
+        return 1
+    prov.download(st.video_url, dest)
+    db.update_job(job["id"], status="succeeded", result_url=st.video_url, result_path=str(dest))
+    print(f"Готово: {dest}\nПосмотрите ролик глазами: логотип (буквы, зеркальность), колесо, вода, движение камеры.")
+    if sys.platform == "win32":
+        os.startfile(dest)  # type: ignore[attr-defined]
+    return 0
+
+
 def cmd_voice_samples(a, s):
     """Одна фраза разными голосами — чтобы выбрать голос кота на слух."""
     from .generation.voice import load_preset
@@ -847,6 +956,21 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--force", action="store_true", help="перегенерировать даже без изменений текста")
     v.add_argument("--yes", action="store_true", help="подтвердить расход без вопроса")
     v.set_defaults(fn=cmd_voice)
+
+    ve = sub.add_parser("video-edit", help="ПЛАТНО: правка готового видео в Higgsfield (Kling Omni Video Edit)")
+    ve.add_argument("--video", required=True, help="исходный ролик 3–10 с (MOV/MP4)")
+    ve.add_argument("--image", action="append", help="картинка-референс (логотип); можно до 4 раз")
+    ve.add_argument("--prompt", help="что изменить (по-английски)")
+    ve.add_argument("--prompt-file", help="промпт из файла")
+    ve.add_argument("--model", default=VIDEO_EDIT_MODEL)
+    ve.add_argument("--price-usd", type=float, help="цена запуска в $ из кабинета Higgsfield (если нет в pricing.yaml)")
+    ve.add_argument("--episode", default="video-edit", help="к какому ролику отнести расход (лимит на ролик)")
+    ve.add_argument("--out", help="куда сохранить результат")
+    ve.add_argument("--timeout", type=int, default=1800, help="сколько ждать результата, с")
+    ve.add_argument("--dry-run", action="store_true", help="только смета, без отправки")
+    ve.add_argument("--again", action="store_true", help="запустить заново, даже если такая правка уже была")
+    ve.add_argument("--yes", action="store_true")
+    ve.set_defaults(fn=cmd_video_edit)
 
     vs = sub.add_parser("voice-samples", help="одна фраза разными голосами — выбрать голос кота")
     vs.add_argument("--voices", help="через запятую; по умолчанию — 15 русских голосов SpeechKit")

@@ -744,3 +744,36 @@ def test_voice_samples_styles(settings, monkeypatch, tmp_path):
     cli.cmd_voice_samples(a, settings)
     assert bodies[0]["instructions"] == tts.OPENAI_CAT_STYLES["sly"]
     assert (settings.data_dir / "voice_samples" / "ash_kid_s1.0.wav").exists()
+
+
+def test_video_edit_paid_flow(settings, monkeypatch, tmp_path):
+    import subprocess
+    from types import SimpleNamespace as NS
+    from studio import cli
+    from studio.integrations import higgsfield
+    from studio.integrations.base import TaskState
+    vid = tmp_path / "wheel.mov"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=108x192:d=4", vid], check=True)
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"png")
+    monkeypatch.setattr(higgsfield, "credentials", lambda: "k:s")
+    calls = {"submit": 0}
+
+    def fake_edit(self, model, video, images, prompt):
+        calls["submit"] += 1
+        assert model == "kling-video/omni/video-edit" and video.suffix == ".mp4" and images == [logo]
+        return "req-1"
+    monkeypatch.setattr(higgsfield.HiggsfieldProvider, "video_edit", fake_edit)
+    monkeypatch.setattr(higgsfield.HiggsfieldProvider, "poll",
+                        lambda self, rid, kind, context=None: TaskState(task_id=rid, status="succeeded",
+                                                                        video_url="https://x/v.mp4"))
+    monkeypatch.setattr(higgsfield.HiggsfieldProvider, "download", lambda self, url, dest: dest.write_bytes(b"v"))
+    a = NS(video=str(vid), image=[str(logo)], prompt="put logo", prompt_file=None, model=cli.VIDEO_EDIT_MODEL,
+           price_usd=None, episode="video-edit", out=None, timeout=60, dry_run=False, again=False, yes=True)
+    with pytest.raises(RuntimeError, match="Цена"):         # без цены смета невозможна — не запускаем
+        cli.cmd_video_edit(a, settings)
+    a.price_usd = 0.5
+    assert cli.cmd_video_edit(a, settings) == 0 and calls["submit"] == 1
+    assert cli.cmd_video_edit(a, settings) == 0 and calls["submit"] == 1   # повтор не платит второй раз
+    a.dry_run, a.again = True, True
+    assert cli.cmd_video_edit(a, settings) == 0 and calls["submit"] == 1
