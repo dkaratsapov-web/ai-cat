@@ -304,6 +304,8 @@ SALUTE_VOICES = {   # 24 кГц; мужские — для кота
     "Bys_24000": "Борис", "Tur_24000": "Тарас", "Pon_24000": "Сергей",
     "Nec_24000": "Наталья", "May_24000": "Марфа", "Ost_24000": "Александра",
 }
+# Эмоции SSML: <speak><voice mode="happy">…</voice></speak> (developers.sber.ru → SaluteSpeech → SSML → эмоции)
+SALUTE_MODES = ("happy", "annoyed", "sad", "whisper")
 
 
 class SaluteTTS(TTSProvider):
@@ -361,9 +363,15 @@ class SaluteTTS(TTSProvider):
         voice = preset.get("voice") or "Bys_24000"
         if voice not in SALUTE_VOICES and not voice.endswith("_24000"):
             raise NotConfiguredError(f"Голос «{voice}» не из SaluteSpeech (например Bys_24000)")
-        ctype = "application/ssml" if text.lstrip().startswith("<speak") else "application/text"
+        body, mode = text, preset.get("mode")
+        if mode:
+            if mode not in SALUTE_MODES:
+                raise ProviderError(f"Эмоция «{mode}» не поддерживается SaluteSpeech: {', '.join(SALUTE_MODES)}")
+            from xml.sax.saxutils import escape
+            body = f'<speak><voice mode="{mode}">{escape(text)}</voice></speak>'
+        ctype = "application/ssml" if body.lstrip().startswith("<speak") else "application/text"
         try:
-            r = requests.post(SALUTE_SYNTH, params={"format": "wav16", "voice": voice}, data=text.encode("utf-8"),
+            r = requests.post(SALUTE_SYNTH, params={"format": "wav16", "voice": voice}, data=body.encode("utf-8"),
                               timeout=120, verify=self._verify(),
                               headers={"Authorization": f"Bearer {self._bearer()}", "Content-Type": ctype})
         except requests.RequestException as e:

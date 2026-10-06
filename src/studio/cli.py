@@ -383,12 +383,14 @@ def cmd_voice_samples(a, s):
         voices = _split(a.voices) or ["ash", "ballad", "cedar", "echo", "onyx", "verse", "marin", "alloy"]
     else:
         voices = _split(a.voices) or list(DEFAULT_SAMPLE_VOICES)
-    styles = _split(a.styles) if a.provider == "openai" else []
+    from .integrations.tts import SALUTE_MODES
+    known = {"openai": tuple(OPENAI_CAT_STYLES), "salute": SALUTE_MODES}.get(a.provider, ())
+    styles = (_split(a.styles) or []) if known else []
     if styles == ["all"]:
-        styles = list(OPENAI_CAT_STYLES)
-    bad = [x for x in styles if x not in OPENAI_CAT_STYLES]
+        styles = list(known)
+    bad = [x for x in styles if x not in known]
     if bad:
-        raise RuntimeError(f"Нет стилей {bad}. Есть: {', '.join(OPENAI_CAT_STYLES)}")
+        raise RuntimeError(f"Нет стилей {bad}. Есть: {', '.join(known)}")
     runs = [(v, st) for v in voices for st in (styles or [None])]
     base = dict(load_preset(s, "default"))
     pricing = s.load_yaml("config/pricing.yaml")
@@ -407,7 +409,7 @@ def cmd_voice_samples(a, s):
     for v, style in runs:
         preset = {**base, "voice": v, "role": a.role, "speed": a.speed, "pitch_shift": a.pitch}
         if a.provider == "salute":
-            preset = {"voice": v, "speed": a.speed}
+            preset = {"voice": v, "speed": a.speed, **({"mode": style} if style else {})}
         elif a.provider == "openai":
             instr = OPENAI_CAT_STYLES[style] if style else a.instructions
             preset = {"voice": v, "speed": a.speed, "model_id": a.model,
@@ -987,8 +989,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="shifted — мультяшный тембр; preserved — тот же голос, но выше")
     vs.add_argument("--provider", default="yandex", choices=["yandex", "openai", "salute"])
     vs.add_argument("--instructions", help="(openai) как говорить: «ироничный кот-маркетолог, бодро»")
-    vs.add_argument("--styles", help="(openai) характеры кота через запятую или all: "
-                    "cartoon, sly, kid, lazy, host, nerd — каждый голос озвучится каждым стилем")
+    vs.add_argument("--styles", help="через запятую или all; каждый голос озвучится каждым стилем. "
+                    "openai — характеры кота: cartoon, sly, kid, lazy, host, nerd; "
+                    "salute — эмоции SSML: happy, annoyed, sad, whisper")
     vs.add_argument("--model", default="gpt-4o-mini-tts", help="(openai) gpt-4o-mini-tts | tts-1-hd | tts-1")
     vs.add_argument("--yes", action="store_true")
     vs.set_defaults(fn=cmd_voice_samples)

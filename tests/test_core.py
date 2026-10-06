@@ -693,6 +693,9 @@ def test_salute_tts_protocol(settings, monkeypatch, tmp_path):
     assert synth[1]["headers"]["Content-Type"] == "application/text"
     assert abs(res.duration - 1.0) < 0.1 and [w[0] for w in res.words] == ["Мяу,", "привет"]
     assert 0 < res.words[0][1] < res.words[1][1] < res.duration
+    p.synthesize("Мяу & ура!", {"voice": "Bys_24000", "mode": "happy"}, tmp_path / "c.wav")
+    assert calls[-1][1]["headers"]["Content-Type"] == "application/ssml"
+    assert calls[-1][1]["data"].decode() == '<speak><voice mode="happy">Мяу &amp; ура!</voice></speak>'
 
 
 def test_openai_tts_protocol(settings, monkeypatch, tmp_path):
