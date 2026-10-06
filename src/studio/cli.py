@@ -323,6 +323,7 @@ def cmd_video_edit(a, s):
             print(w)
         if not budget.confirm(f"Запустить правку за ~${est:.2f}?", a.yes):
             return 0
+        print("Перекодирую видео в MP4…", flush=True)
         src_mp4 = out_dir / f"src_{digest}.mp4"     # MOV с телефона → MP4 H.264 (так надёжнее принимают модели)
         ffmpeg.run(["ffmpeg", "-y", "-v", "error", "-i", video, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
                     "-crf", "18", "-c:a", "aac", "-movflags", "+faststart", src_mp4])
@@ -330,6 +331,8 @@ def cmd_video_edit(a, s):
                                model=a.model, params={"video": video.name, "images": [i.name for i in images],
                                                       "prompt": prompt}, idempotency_key=key, est_cost_usd=est,
                                status="submitting")
+        print("Загружаю файлы в Higgsfield и создаю задачу (до пары минут; не прерывайте — задача платная)…",
+              flush=True)
         try:
             rid = prov.video_edit(a.model, src_mp4, images, prompt)
         except ProviderError as e:
@@ -349,7 +352,7 @@ def cmd_video_edit(a, s):
         if time.time() - t0 > a.timeout:
             print(f"Ещё не готово ({st.status}). Повторите ту же команду позже — новой оплаты не будет.")
             return 1
-        print(f"  … {st.status}, {int(time.time() - t0)} с")
+        print(f"  … {st.status}, {int(time.time() - t0)} с", flush=True)
         time.sleep(15)
     if st.status == "failed":
         db.update_job(job["id"], status="failed", error=st.message)
