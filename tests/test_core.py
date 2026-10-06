@@ -693,3 +693,26 @@ def test_salute_tts_protocol(settings, monkeypatch, tmp_path):
     assert synth[1]["headers"]["Content-Type"] == "application/text"
     assert abs(res.duration - 1.0) < 0.1 and [w[0] for w in res.words] == ["Мяу,", "привет"]
     assert 0 < res.words[0][1] < res.words[1][1] < res.duration
+
+
+def test_openai_tts_protocol(settings, monkeypatch, tmp_path):
+    import io
+    import wave
+    from types import SimpleNamespace as NS
+    from studio.integrations import tts
+    monkeypatch.setattr(tts, "secret", lambda n: "sk-test" if n == "OPENAI_API_KEY" else None)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(b"\x00\x00" * 48000)
+    seen = {}
+
+    def fake_post(url, json=None, headers=None, **kw):
+        seen.update(url=url, body=json, headers=headers)
+        return NS(status_code=200, content=buf.getvalue(), text="")
+    monkeypatch.setattr(tts.requests, "post", fake_post)
+    res = tts.OpenAITTS(settings).synthesize("Топ-пять инструментов!", {"voice": "ermil", "speed": 1.1}, tmp_path / "a.wav")
+    assert seen["url"].endswith("/v1/audio/speech") and seen["headers"]["Authorization"] == "Bearer sk-test"
+    b = seen["body"]
+    assert b["model"] == "gpt-4o-mini-tts" and b["voice"] == "ash" and b["response_format"] == "wav"
+    assert b["instructions"] and b["speed"] == 1.1
+    assert abs(res.duration - 2.0) < 0.1 and len(res.words) == 2

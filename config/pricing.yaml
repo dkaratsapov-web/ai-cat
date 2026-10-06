@@ -80,3 +80,9 @@ salute:
   source: https://developers.sber.ru/docs/ru/salutespeech/overview
   checked: 2026-10-06
   verified: false
+
+openai_tts:
+  # OpenAI gpt-4o-mini-tts: цена в прайс студии не внесена (тарифицируется по токенам, смотрите
+  # platform.openai.com → Pricing и Usage). Образцы и озвучка ролика — центы.
+  usd_per_1000_chars: 0
+  verified: false

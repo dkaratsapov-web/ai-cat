@@ -401,3 +401,62 @@ def approx_word_timings(text: str, duration: float, lead: float = 0.12, tail: fl
         out.append((w, round(t, 3), round(t + (len(w) + 2) * scale, 3)))
         t += wt * scale
     return out
+
+
+OPENAI_SPEECH = "https://api.openai.com/v1/audio/speech"
+OPENAI_VOICES = ("ash", "ballad", "cedar", "echo", "onyx", "verse", "marin", "alloy", "fable", "sage", "coral",
+                 "nova", "shimmer")
+OPENAI_CAT_INSTRUCTIONS = (
+    "Говори по-русски, как ироничный и уверенный кот-маркетолог: живо, с лёгкой улыбкой в голосе, "
+    "чёткая дикция, естественные паузы, без дикторского пафоса. Темп бодрый, как в коротком видео для соцсетей.")
+
+
+class OpenAITTS(TTSProvider):
+    """OpenAI Text-to-Speech: POST /v1/audio/speech (Bearer OPENAI_API_KEY).
+
+    Контракт сверен по официальному SDK openai 3.25.0 (types/audio/speech_create_params.py): input (до 4096 симв.),
+    model (gpt-4o-mini-tts | tts-1 | tts-1-hd), voice (alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin,
+    cedar, fable, onyx, nova), instructions (подача голосом; не для tts-1), response_format (wav…), speed 0.25–4.
+    Пословных таймингов нет — раскладываем приблизительно.
+    """
+    name = "openai"
+
+    def __init__(self, settings=None):
+        self.settings = settings
+
+    def configured(self) -> tuple[bool, str]:
+        return (True, "OPENAI_API_KEY") if secret("OPENAI_API_KEY") else (False, "Нет OPENAI_API_KEY в .env")
+
+    def estimate_usd(self, text: str, preset: dict, pricing: dict) -> float:
+        return round(len(text) / 1000 * float(pricing.get("openai_tts", {}).get("usd_per_1000_chars", 0) or 0), 5)
+
+    def synthesize(self, text: str, preset: dict, dest: Path, **_: Any) -> TTSResult:
+        key = secret("OPENAI_API_KEY")
+        if not key:
+            raise NotConfiguredError("Нет OPENAI_API_KEY")
+        model = preset.get("model_id") or "gpt-4o-mini-tts"
+        voice = preset.get("voice") if preset.get("voice") in OPENAI_VOICES else "ash"   # пресет от Yandex — свой голос
+        body: dict[str, Any] = {"model": model, "voice": voice, "input": text,
+                                "response_format": "wav"}
+        if not model.startswith("tts-1"):
+            body["instructions"] = preset.get("instructions") or OPENAI_CAT_INSTRUCTIONS
+        if preset.get("speed"):
+            body["speed"] = float(preset["speed"])
+        try:
+            r = requests.post(OPENAI_SPEECH, json=body, timeout=180,
+                              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        except requests.RequestException as e:
+            raise ProviderError(f"OpenAI TTS недоступен: {type(e).__name__}", retryable=True) from e
+        if r.status_code >= 400:
+            raise ProviderError(f"OpenAI TTS HTTP {r.status_code}: {r.text[:300]}", status=r.status_code)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        raw = dest.with_suffix(".src.wav")
+        raw.write_bytes(r.content)
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(raw), "-ac", "1", "-ar", "48000",
+                        str(dest)], check=True)
+        raw.unlink(missing_ok=True)
+        dur = ffmpeg.duration(dest)
+        return TTSResult(audio_path=dest, duration=dur, words=approx_word_timings(text, dur), characters=len(text))
+
+    def account_info(self) -> dict[str, Any]:
+        return {"note": "расход — в кабинете OpenAI → Usage"}

@@ -38,6 +38,18 @@ presets:
     pitch_shift: 0
     effect: {pitch: 1.5, formant: shifted}
 
+  # --- OpenAI TTS (тест: studio voice-samples --provider openai) ---
+  # Голоса: ash, ballad, cedar, echo, onyx, verse, marin, alloy, fable, sage, coral, nova, shimmer.
+  # instructions — как говорить (по-русски, своими словами).
+  gpt:
+    provider: openai
+    model_id: gpt-4o-mini-tts
+    voice: ash
+    speed: 1.1
+    instructions: >-
+      Говори по-русски, как ироничный и уверенный кот-маркетолог: живо, с лёгкой улыбкой в голосе, чёткая дикция,
+      естественные паузы, без дикторского пафоса. Темп бодрый, как в коротком видео для соцсетей.
+
   # --- Сбер SaluteSpeech (тест: studio voice-samples --provider salute) ---
   # Голоса 24 кГц: Bys_24000 Борис, Tur_24000 Тарас, Pon_24000 Сергей (мужские); Nec_24000 Наталья,
   # May_24000 Марфа, Ost_24000 Александра. Темп меняется локально (без искажения тона).

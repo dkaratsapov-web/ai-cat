@@ -267,14 +267,16 @@ def cmd_voice_samples(a, s):
     if a.provider == "salute":
         from .integrations.tts import SALUTE_VOICES
         voices = _split(a.voices) or list(SALUTE_VOICES)
+    elif a.provider == "openai":
+        voices = _split(a.voices) or ["ash", "ballad", "cedar", "echo", "onyx", "verse", "marin", "alloy"]
     else:
         voices = _split(a.voices) or list(DEFAULT_SAMPLE_VOICES)
     base = dict(load_preset(s, "default"))
     pricing = s.load_yaml("config/pricing.yaml")
     per = prov.estimate_usd(a.text, base, pricing)
     rub = per * float(pricing.get("yandex", {}).get("rub_per_usd", 90))
-    if a.provider == "salute" and not per:
-        print(f"{len(voices)} образцов SaluteSpeech — цена по вашему тарифу в кабинете Сбера (в прайс студии не внесена)")
+    if a.provider in ("salute", "openai") and not per:
+        print(f"{len(voices)} образцов {a.provider} — цена по тарифу в кабинете сервиса (в прайс студии не внесена; это центы)")
     else:
         print(f"{len(voices)} образцов × ~{rub:.2f} ₽ ≈ {rub * len(voices):.1f} ₽")
     if not Budget(s, _db(s)).confirm("Озвучить образцы?", a.yes):
@@ -287,6 +289,9 @@ def cmd_voice_samples(a, s):
         preset = {**base, "voice": v, "role": a.role, "speed": a.speed, "pitch_shift": a.pitch}
         if a.provider == "salute":
             preset = {"voice": v, "speed": a.speed}
+        elif a.provider == "openai":
+            preset = {"voice": v, "speed": a.speed, "model_id": "gpt-4o-mini-tts",
+                      **({"instructions": a.instructions} if a.instructions else {})}
         tag = "_".join(x for x in (v, a.role or "", f"p{int(a.pitch)}" if a.pitch else "", f"s{a.speed}") if x)
         dest = out_dir / f"{tag}.wav"
         try:
@@ -828,7 +833,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     v = sub.add_parser("voice", help="озвучка")
     v.add_argument("episode")
-    v.add_argument("--provider", choices=["yandex", "salute", "elevenlabs", "manual", "mock"])
+    v.add_argument("--provider", choices=["yandex", "openai", "salute", "elevenlabs", "manual", "mock"])
     v.add_argument("--scenes")
     v.add_argument("--force", action="store_true", help="перегенерировать даже без изменений текста")
     v.add_argument("--yes", action="store_true", help="подтвердить расход без вопроса")
@@ -844,7 +849,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="локальные варианты тона для каждого голоса (бесплатно), например 1.2,1.35,1.5")
     vs.add_argument("--formant", default="shifted", choices=["shifted", "preserved"],
                     help="shifted — мультяшный тембр; preserved — тот же голос, но выше")
-    vs.add_argument("--provider", default="yandex", choices=["yandex", "salute"])
+    vs.add_argument("--provider", default="yandex", choices=["yandex", "openai", "salute"])
+    vs.add_argument("--instructions", help="(openai) как говорить: «ироничный кот-маркетолог, бодро»")
     vs.add_argument("--yes", action="store_true")
     vs.set_defaults(fn=cmd_voice_samples)
 
